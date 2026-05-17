@@ -1,0 +1,23 @@
+{
+  "name": "@narrative-studio/web",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "type-check": "nuxt typecheck"
+  },
+  "dependencies": {
+    "nuxt": "^4.4.5",
+    "vue": "^3.5.34",
+    "vue-router": "^5.0.6"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^0.5.0",
+    "typescript": "^5.4.5"
+  }
+}
