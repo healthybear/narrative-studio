@@ -226,6 +226,40 @@ python --version
 pnpm clean
 ```
 
+### Claude Code 工具调用问题
+如果遇到 Write 或 Bash 工具反复报告参数缺失错误，使用以下解决方案：
+
+**方案 1：使用 Python 创建文件**
+```bash
+# 使用完整的 Python 路径
+/d/sofeware/Python313/python -c "
+import os
+os.makedirs('目标目录', exist_ok=True)
+with open('目标文件路径', 'w', encoding='utf-8') as f:
+    f.write('文件内容')
+print('文件创建成功')
+"
+```
+
+**方案 2：先创建空文件，再使用 Write 工具**
+```bash
+# 1. 使用 Python 创建空文件
+/d/sofeware/Python313/python -c "
+import os
+os.makedirs('docs/目录', exist_ok=True)
+with open('docs/文件.md', 'w', encoding='utf-8') as f:
+    f.write('# 标题\n\n')
+print('文件创建成功')
+"
+
+# 2. 然后使用 Write 工具写入完整内容（文件已存在时 Write 工具更稳定）
+```
+
+**注意**：
+- Windows 环境下 Python 路径可能是 `/d/sofeware/Python313/python` 或 `/c/Users/用户名/AppData/Local/Programs/Python/Python3XX/python`
+- 使用 `which python3 python` 查找可用的 Python 路径
+- 文件内容中的特殊字符（如反引号、美元符号）需要适当转义
+
 ## 贡献指南
 
 1. Fork 项目
