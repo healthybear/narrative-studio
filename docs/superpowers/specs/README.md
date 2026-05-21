@@ -30,7 +30,7 @@ docs/superpowers/specs/
 #### 👨‍💼 产品经理
 1. [项目概述](#项目概述)（本文件）
 2. [页面设计](04-pages/)（8个页面的功能和交互）
-3. [用户交互流程](07-appendix/user-workflows.md) 🚧 待完成
+3. [用户交互流程](07-appendix/user-workflows.md)
 
 #### 👨‍💻 前端开发
 1. [系统架构](#系统架构)（本文件）
@@ -47,9 +47,9 @@ docs/superpowers/specs/
 4. [错误处理](03-api-design/error-handling.md)
 
 #### 🤖 NLP 开发（Python）
-1. [NLP 集成点](05-nlp-integration/)（5个算法模块）🚧 待完成
+1. [NLP 集成点](05-nlp-integration/)（5个算法模块）
 2. [NLP API](03-api-design/nlp-api.md)（Fastify ↔ Python NLP）
-3. [主动学习策略](05-nlp-integration/active-learning.md) 🚧 待完成
+3. [主动学习策略](05-nlp-integration/README.md#2-主动学习流程)
 
 ### 按功能查找
 
@@ -64,11 +64,11 @@ docs/superpowers/specs/
 - [页面8：素材库](04-pages/08-material-library.md) - 素材管理、模式识别
 
 #### NLP 算法开发
-- [场景拆分](05-nlp-integration/scene-splitting.md) 🚧 待完成 - 无监督学习（主题模型 + 段落聚类）
-- [事件检测](05-nlp-integration/event-detection.md) 🚧 待完成 - 半监督学习（主动学习）
-- [人物识别](05-nlp-integration/character-extraction.md) 🚧 待完成 - 几乎全自动（NER + 共指消解）
-- [情感分析](05-nlp-integration/emotion-analysis.md) 🚧 待完成 - 预训练模型直接推理
-- [视角分析](05-nlp-integration/perspective-analysis.md) 🚧 待完成 - 规则 + 统计（几乎全自动）
+- [场景拆分](05-nlp-integration/scene-splitting.md) - 无监督学习（主题模型 + 段落聚类）
+- [事件检测](05-nlp-integration/event-detection.md) - 半监督学习（主动学习）
+- [人物识别](05-nlp-integration/character-extraction.md) - 几乎全自动（NER + 共指消解）
+- [情感分析](05-nlp-integration/emotion-analysis.md) - 预训练模型直接推理
+- [视角分析](05-nlp-integration/perspective-analysis.md) - 规则 + 统计（几乎全自动）
 
 #### 数据层开发
 - [核心数据模型](02-data-models/core-models.md) - Novel、Chapter、Scene
@@ -83,12 +83,12 @@ docs/superpowers/specs/
 
 ### 按开发阶段查找
 
-- **Phase 1（当前）**：[基础框架](06-implementation/phase-1-foundation.md) 🚧 待完成 - 项目搭建、路由、基础组件
-- **Phase 2**：[数据采集](06-implementation/phase-2-data-collection.md) 🚧 待完成 - 文件导入、章节识别
-- **Phase 3**：[标注功能](06-implementation/phase-3-annotation.md) 🚧 待完成 - 场景拆分、事件标注、人物建模
-- **Phase 4**：[可视化分析](06-implementation/phase-4-visualization.md) 🚧 待完成 - 图表、时间轴、关系网络
-- **Phase 5**：[NLP 集成](06-implementation/phase-5-nlp-integration.md) 🚧 待完成 - AI 自动标注、主动学习
-- **Phase 6**：[AI 生成](06-implementation/phase-6-ai-generation.md) 🚧 待完成 - 智能创作辅助（未来）
+- **Phase 1（当前）**：[基础框架](06-implementation/phase-1-foundation.md) - 项目搭建、路由、基础组件
+- **Phase 2**：[数据采集](06-implementation/phase-2-data-collection.md) - 文件导入、章节识别
+- **Phase 3**：[标注功能](06-implementation/phase-3-annotation.md) - 场景拆分、事件标注、人物建模
+- **Phase 4**：[可视化分析](06-implementation/phase-4-visualization.md) - 图表、时间轴、关系网络
+- **Phase 5**：[NLP 集成](06-implementation/phase-5-nlp-integration.md) - AI 自动标注、主动学习
+- **Phase 6**：[AI 生成](06-implementation/phase-6-ai-generation.md) - 智能创作辅助（未来）
 
 ## 📖 项目概述
 
@@ -241,9 +241,9 @@ Narrative Studio 是一个基于计算叙事学的可视化小说创作与分析
 ### 相关资源
 
 - **代码仓库**：[packages/types/src/index.ts](../../../packages/types/src/index.ts) - TypeScript 类型定义
-- **技术挑战**：[07-appendix/technical-challenges.md](07-appendix/technical-challenges.md) 🚧 待完成
-- **用户交互流程**：[07-appendix/user-workflows.md](07-appendix/user-workflows.md) 🚧 待完成
-- **未来扩展**：[07-appendix/future-extensions.md](07-appendix/future-extensions.md) 🚧 待完成
+- **技术挑战**：[07-appendix/technical-challenges.md](07-appendix/technical-challenges.md) - 大文本处理、数据一致性、NLP准确性等
+- **用户交互流程**：[07-appendix/user-workflows.md](07-appendix/user-workflows.md) - AI辅助标注流程、关键交互场景
+- **未来扩展**：[07-appendix/future-extensions.md](07-appendix/future-extensions.md) - AI生成、协作功能、商业化
 
 ### 归档文档
 
@@ -253,6 +253,8 @@ Narrative Studio 是一个基于计算叙事学的可视化小说创作与分析
 
 ### 文档版本历史
 
+- **v2.3**（2026-05-22）：完成 P2 优先级文档（实施指南 7个 + 附录 3个）
+- **v2.2**（2026-05-22）：完成 P1 优先级文档（架构设计 1个 + NLP集成 6个）
 - **v2.1**（2026-05-22）：完成 P0 优先级文档（数据模型 4个 + API设计 3个）
 - **v2.0**（2026-05-21）：重构文档结构，拆分为30+个模块化文档
 - **v1.1**（2026-05-21）：添加补充设计文档（API、IndexedDB、错误处理）
