@@ -23,6 +23,10 @@
 <script setup lang="ts">
 // 分析结果页面
 const route = useRoute()
+
+definePageMeta({
+  layout: 'novel'
+})
 </script>
 
 <style scoped>

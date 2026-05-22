@@ -9,6 +9,10 @@
 <script setup lang="ts">
 // 情感分析页面
 const route = useRoute()
+
+definePageMeta({
+  layout: 'novel'
+})
 </script>
 
 <style scoped>

@@ -9,6 +9,10 @@
 <script setup lang="ts">
 // 视角分析页面
 const route = useRoute()
+
+definePageMeta({
+  layout: 'novel'
+})
 </script>
 
 <style scoped>

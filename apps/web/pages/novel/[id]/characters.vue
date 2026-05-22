@@ -9,6 +9,10 @@
 <script setup lang="ts">
 // 人物建模页面
 const route = useRoute()
+
+definePageMeta({
+  layout: 'novel'
+})
 </script>
 
 <style scoped>
