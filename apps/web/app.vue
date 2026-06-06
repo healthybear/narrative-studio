@@ -1,22 +1,27 @@
 <template>
-  <n-config-provider :theme="theme">
+  <n-config-provider :theme="theme" :theme-overrides="themeOverrides">
     <n-message-provider>
-      <n-dialog-provider>
-        <n-notification-provider>
-          <NuxtLayout>
-            <NuxtPage />
-          </NuxtLayout>
-        </n-notification-provider>
-      </n-dialog-provider>
+      <n-notification-provider>
+        <n-dialog-provider>
+          <n-loading-bar-provider>
+            <NuxtLayout>
+              <NuxtPage />
+            </NuxtLayout>
+          </n-loading-bar-provider>
+        </n-dialog-provider>
+      </n-notification-provider>
     </n-message-provider>
   </n-config-provider>
 </template>
 
 <script setup lang="ts">
-// Naive UI 配置
-import { NConfigProvider, NMessageProvider, NDialogProvider, NNotificationProvider } from 'naive-ui'
+/**
+ * 应用根组件
+ * 提供全局布局、主题配置和页面路由
+ */
 
-const theme = null // 使用默认主题
+// 使用主题配置
+const { theme, themeOverrides } = useTheme()
 
 // 初始化 IndexedDB
 onMounted(async () => {
@@ -29,3 +34,7 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style>
+/* 全局样式在 assets/css/main.css 中定义 */
+</style>

@@ -1,356 +1,204 @@
-# 页面2：结构标注
+# 页面 2：结构标注
 
 **路由**：`/novel/:id/structure`  
-**最后更新**：2026-05-22  
+**最后更新**：2026-06-06  
 **相关文档**：
 - [核心数据模型](../02-data-models/core-models.md)
-- [场景拆分算法](../05-nlp-integration/scene-splitting.md)
-- [Phase 3: 标注功能](../06-implementation/phase-3-annotation.md)
-- [返回目录](../README.md)
+- [场景拆分设计](../2026-06-06-scene-segmentation-design.md)
+- [Phase 3：标注功能](../06-implementation/phase-3-annotation.md)
 
 ---
 
 ## 概述
 
-结构标注页面用于识别章节和拆分场景，是叙事分析的第一步。
+结构标注页面负责两件事：
 
-**核心功能**：
-- 📖 章节识别（自动 + 手动）
-- ✂️ 场景拆分（AI 优先）
-- 📝 场景元数据编辑
-- 🎨 置信度可视化
+1. 识别和调整章节结构
+2. 在单章内进行手动场景拆分
 
----
+当前阶段采用**手动优先、AI 后挂**的策略：
 
-## 1. UI 布局设计
-
-### 1.1 三栏布局
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│  Header: 《三体》 - 结构标注                    [保存] [返回]   │
-└────────────────────────────────────────────────────────────────┘
-┌──────────┬─────────────────────────────────┬──────────────────┐
-│  左侧栏   │          中间编辑区              │     右侧面板      │
-│  (20%)   │           (60%)                 │      (20%)       │
-│          │                                 │                  │
-│ 章节树    │  ┌─────────────────────────┐   │  场景元数据       │
-│          │  │  第一章 地球往事         │   │                  │
-│ ▼ 第一章  │  │                         │   │  时间：          │
-│   场景1  │  │  [场景1 边界] 🟢        │   │  [未指定]        │
-│   场景2  │  │  汪淼走进会议室...      │   │                  │
-│   场景3  │  │                         │   │  地点：          │
-│          │  │  [场景2 边界] 🟡        │   │  [会议室]        │
-│ ▼ 第二章  │  │  他看到了...            │   │                  │
-│   场景4  │  │                         │   │  出场人物：       │
-│   场景5  │  │  [场景3 边界] 🔴        │   │  ☑ 汪淼         │
-│          │  │  突然，门开了...        │   │  ☑ 史强         │
-│ [AI拆分] │  │                         │   │                  │
-│          │  └─────────────────────────┘   │  场景类型：       │
-│          │                                 │  ○ 对话          │
-│          │  [批量确认高置信度]              │  ● 行动          │
-│          │                                 │  ○ 描写          │
-└──────────┴─────────────────────────────────┴──────────────────┘
-```
-
-### 1.2 场景边界标记
-
-```
-文本内容...
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🟢 场景边界 (置信度: 0.92)
-原因：时间跳跃 + 地点变化
-[✓ 确认]  [✗ 删除]  [✏️ 调整]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-文本内容继续...
-```
+- 章节识别可以自动执行，也支持手动调整边界
+- 场景拆分先实现手动初始化、拆分、合并、保存
+- AI 场景边界建议只预留数据结构和交互入口，不接真实 NLP 服务
 
 ---
 
-## 2. 组件树
+## 当前实现目标
 
-```typescript
-StructureAnnotationPage
-├── PageHeader
-│   ├── NovelTitle
-│   ├── SaveButton
-│   └── BackButton
-├── ThreeColumnLayout
-│   ├── LeftSidebar (20%)
-│   │   ├── ChapterTree
-│   │   │   └── ChapterNode (v-for)
-│   │   │       ├── ChapterTitle
-│   │   │       └── SceneList
-│   │   │           └── SceneItem (v-for)
-│   │   └── AIActionButtons
-│   │       ├── AutoSplitButton
-│   │       └── BatchConfirmButton
-│   ├── CenterEditor (60%)
-│   │   ├── TextViewer
-│   │   │   ├── Paragraph (v-for)
-│   │   │   └── SceneBoundary (v-for)
-│   │   │       ├── ConfidenceBadge
-│   │   │       ├── ReasonText
-│   │   │       └── ActionButtons
-│   │   └── ContextMenu
-│   │       ├── SplitSceneMenuItem
-│   │       └── MergeSceneMenuItem
-│   └── RightPanel (20%)
-│       └── SceneMetadataForm
-│           ├── TimeInput
-│           ├── LocationInput
-│           ├── CharacterSelector
-│           └── SceneTypeRadio
-└── LoadingOverlay
-```
+本页当前必须支持以下闭环：
+
+- 加载小说、章节、场景
+- 无场景时按“每章一个场景”初始化
+- 选择章节后查看该章节场景列表
+- 手动拆分选中场景
+- 合并到上一个相邻场景
+- 编辑场景元数据
+  - 标题
+  - 时间
+  - 地点
+  - 场景类型
+- 保存到 IndexedDB
+- 刷新后恢复
 
 ---
 
-## 3. 状态管理
+## 页面布局
 
-```typescript
-// stores/structure.ts
-export const useStructureStore = defineStore('structure', {
-  state: () => ({
-    currentNovel: null as Novel | null,
-    chapters: [] as Chapter[],
-    scenes: [] as Scene[],
-    selectedSceneId: null as string | null,
-    
-    // AI 拆分状态
-    aiSplitting: false,
-    splitResults: [] as SceneBoundary[],
-  }),
-  
-  actions: {
-    // AI 自动拆分场景
-    async autoSplitScenes(chapterId: string) {
-      this.aiSplitting = true
-      try {
-        const chapter = this.chapters.find(c => c.id === chapterId)
-        if (!chapter) return
-        
-        // 调用 NLP API
-        const response = await fetch('/api/nlp/scenes/split', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: chapter.content,
-            chapterId: chapter.id,
-          }),
-        })
-        
-        const data = await response.json()
-        this.splitResults = data.scenes
-        
-        // 创建场景对象
-        for (const boundary of data.scenes) {
-          const scene: Scene = {
-            id: nanoid(),
-            novelId: this.currentNovel!.id,
-            chapterId: chapter.id,
-            order: this.scenes.filter(s => s.chapterId === chapterId).length,
-            startPosition: boundary.startPosition,
-            endPosition: boundary.endPosition,
-            content: chapter.content.substring(
-              boundary.startPosition,
-              boundary.endPosition
-            ),
-            confidence: boundary.confidence,
-            aiGenerated: true,
-          }
-          
-          this.scenes.push(scene)
-        }
-        
-        // 保存到 IndexedDB
-        const db = await getDB()
-        for (const scene of this.scenes) {
-          await db.put('scenes', scene)
-        }
-        
-      } finally {
-        this.aiSplitting = false
-      }
-    },
-    
-    // 批量确认高置信度边界
-    async batchConfirmHighConfidence() {
-      const highConfidenceScenes = this.scenes.filter(
-        s => s.aiGenerated && s.confidence! >= 0.8
-      )
-      
-      for (const scene of highConfidenceScenes) {
-        scene.aiGenerated = false // 标记为已确认
-      }
-      
-      const db = await getDB()
-      for (const scene of highConfidenceScenes) {
-        await db.put('scenes', scene)
-      }
-    },
-  },
-})
-```
+采用三栏布局：
+
+### 左栏：章节列表
+
+- 展示当前小说章节
+- 显示每章字数和场景数
+- 切换当前章节
+
+### 中栏：场景拆分区
+
+- 展示当前章节内的场景列表
+- 编辑每个场景的：
+  - 标题
+  - 起始偏移
+  - 结束偏移
+- 执行：
+  - 初始化场景
+  - 拆分选中场景
+  - 合并到上一个场景
+
+### 右栏：场景详情与 AI 预留区
+
+- 编辑当前选中场景的元数据
+- 展示场景正文预览
+- 预留 AI 场景建议区域
+- 支持接受建议
 
 ---
 
-## 4. 关键交互流程
+## 数据结构
 
-### 4.1 AI 自动拆分流程
+### SceneDraft
 
-```
-用户点击"AI 自动拆分"
-    ↓
-显示加载状态
-    ↓
-调用 NLP API: POST /nlp/scenes/split
-    ↓
-等待 10 秒（处理中）
-    ↓
-接收场景边界列表
-    ↓
-在文本中插入边界标记
-    ├─ 🟢 绿色：置信度 ≥ 0.8
-    ├─ 🟡 黄色：置信度 0.5-0.8
-    └─ 🔴 红色：置信度 < 0.5
-    ↓
-更新左侧章节树
-    ↓
-显示"批量确认"按钮
-```
+页面编辑态使用 `SceneDraft`：
 
-### 4.2 手动调整边界流程
-
-```
-用户选中文本段落
-    ↓
-右键打开菜单
-    ├─ "拆分为新场景"
-    │   ↓
-    │  在此处插入场景边界
-    │   ↓
-    │  创建新场景对象
-    │
-    └─ "合并到上一场景"
-        ↓
-       删除当前场景边界
-        ↓
-       合并场景内容
-```
-
----
-
-## 5. 代码实现示例
-
-```vue
-<!-- pages/novel/[id]/structure.vue -->
-<template>
-  <div class="structure-page">
-    <PageHeader
-      :title="`《${novel?.title}》 - 结构标注`"
-      @save="handleSave"
-      @back="handleBack"
-    />
-    
-    <div class="three-column-layout">
-      <!-- 左侧：章节树 -->
-      <div class="left-sidebar">
-        <n-tree
-          :data="chapterTreeData"
-          :selected-keys="[selectedSceneId]"
-          @update:selected-keys="handleSelectScene"
-        />
-        
-        <div class="actions">
-          <n-button
-            type="primary"
-            block
-            :loading="structureStore.aiSplitting"
-            @click="handleAutoSplit"
-          >
-            🤖 AI 自动拆分
-          </n-button>
-          
-          <n-button
-            v-if="hasUnconfirmedScenes"
-            block
-            @click="handleBatchConfirm"
-          >
-            ✓ 批量确认高置信度
-          </n-button>
-        </div>
-      </div>
-      
-      <!-- 中间：文本编辑区 -->
-      <div class="center-editor">
-        <div
-          v-for="(item, index) in displayItems"
-          :key="index"
-        >
-          <!-- 段落 -->
-          <p
-            v-if="item.type === 'paragraph'"
-            class="paragraph"
-            @contextmenu.prevent="handleContextMenu($event, item)"
-          >
-            {{ item.content }}
-          </p>
-          
-          <!-- 场景边界 -->
-          <SceneBoundary
-            v-else-if="item.type === 'boundary'"
-            :boundary="item"
-            @confirm="handleConfirmBoundary"
-            @delete="handleDeleteBoundary"
-            @adjust="handleAdjustBoundary"
-          />
-        </div>
-      </div>
-      
-      <!-- 右侧：元数据面板 -->
-      <div class="right-panel">
-        <SceneMetadataForm
-          v-if="selectedScene"
-          :scene="selectedScene"
-          @update="handleUpdateMetadata"
-        />
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { computed } from 'vue'
-import { useStructureStore } from '~/stores/structure'
-
-const structureStore = useStructureStore()
-
-const hasUnconfirmedScenes = computed(() => 
-  structureStore.scenes.some(s => s.aiGenerated && s.confidence! >= 0.8)
-)
-
-async function handleAutoSplit() {
-  const currentChapter = structureStore.chapters[0] // 示例
-  await structureStore.autoSplitScenes(currentChapter.id)
-  window.$message.success('场景拆分完成，请审核结果')
+```ts
+interface SceneDraft {
+  id: string
+  chapterId: string
+  title: string
+  content: string
+  order: number
+  startOffset: number
+  endOffset: number
+  wordCount: number
+  timeLabel?: string
+  locationLabel?: string
+  characterIds: string[]
+  sceneType?: 'dialogue' | 'action' | 'description' | 'transition'
+  source: 'manual' | 'ai'
+  suggestionStatus?: 'pending' | 'accepted' | 'rejected'
 }
+```
 
-async function handleBatchConfirm() {
-  await structureStore.batchConfirmHighConfidence()
-  window.$message.success('已确认所有高置信度边界')
+### SceneSuggestion
+
+AI 建议预留结构：
+
+```ts
+interface SceneSuggestion {
+  id: string
+  chapterId: string
+  startOffset: number
+  endOffset: number
+  confidence: number
+  reason: string
+  status: 'pending' | 'accepted' | 'rejected'
 }
-</script>
 ```
 
 ---
 
-## 6. 相关资源
+## 偏移规则
 
-### 相关文档
-- [核心数据模型](../02-data-models/core-models.md)
-- [场景拆分算法](../05-nlp-integration/scene-splitting.md)
-- [NLP API](../03-api-design/nlp-api.md)
-- [Phase 3: 标注功能](../06-implementation/phase-3-annotation.md)
+- 章节的 `startOffset/endOffset` 相对于小说全文
+- 场景的 `startOffset/endOffset` 相对于章节内容
+- 页面内所有场景拆分与合并都以“章节内偏移”为准
+
+换算全文位置时：
+
+```ts
+const absoluteStart = chapter.startOffset + scene.startOffset
+const absoluteEnd = chapter.startOffset + scene.endOffset
+```
+
+---
+
+## 状态流
+
+当前推荐状态流如下：
+
+1. `novel store` 加载 `novel`
+2. `novel store` 加载 `chapters`
+3. `novel store` 加载 `scenes`
+4. 若该小说无场景，则调用默认初始化逻辑
+5. 页面维护 `chapterDrafts`、`sceneDrafts`、`sceneSuggestions`
+6. 保存时调用 store，再写入 IndexedDB
+
+---
+
+## 核心交互
+
+### 1. 初始化场景
+
+- 触发条件：当前章节没有场景
+- 行为：将整章内容初始化为一个场景
+
+### 2. 拆分场景
+
+- 触发条件：当前选中场景
+- 行为：按给定偏移将一个场景拆成两个
+- 结果：重算顺序、内容、字数
+
+### 3. 合并场景
+
+- 触发条件：当前场景前方存在相邻场景
+- 行为：合并到前一个场景
+- 结果：删除当前场景，重算内容和顺序
+
+### 4. 接受 AI 建议
+
+- 当前仅演示预留结构
+- 接受建议时，本质上仍是按建议偏移拆分场景
+- 被接受的新场景标记为：
+  - `source = 'ai'`
+  - `suggestionStatus = 'accepted'`
+
+---
+
+## 错误处理
+
+需要处理以下情况：
+
+- 小说不存在
+- 章节为空
+- 拆分偏移不在场景范围内
+- 合并目标不存在
+- IndexedDB 保存失败
+
+处理策略：
+
+- 页面即时提示使用 `message.error`
+- store 记录 `lastError`
+- 偏移先做本地修正，非法时阻止保存
+
+---
+
+## 验收标准
+
+页面达到以下条件即视为通过：
+
+- 可以识别章节并保存
+- 可以初始化场景
+- 可以在单章内拆分和合并场景
+- 可以编辑场景基础元数据
+- 刷新后场景数据可恢复
+- AI 建议区已预留接入位置

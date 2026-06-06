@@ -1,150 +1,61 @@
 <template>
-  <n-config-provider :theme="theme">
-    <n-message-provider>
-      <n-dialog-provider>
-        <n-notification-provider>
-          <div class="default-layout">
-            <header class="layout-header">
-              <div class="header-content">
-                <h1 class="logo">
-                  <NuxtLink to="/novels">Narrative Studio</NuxtLink>
-                </h1>
-                <nav class="nav">
-                  <NuxtLink to="/novels" class="nav-link">
-                    <n-icon :component="BookOutline" />
-                    <span>项目管理</span>
-                  </NuxtLink>
-                  <NuxtLink to="/library" class="nav-link">
-                    <n-icon :component="LibraryOutline" />
-                    <span>素材库</span>
-                  </NuxtLink>
-                </nav>
-                <div class="header-actions">
-                  <n-button text @click="toggleTheme">
-                    <n-icon :size="20" :component="theme ? SunnyOutline : MoonOutline" />
-                  </n-button>
-                </div>
-              </div>
-            </header>
+  <n-layout has-sider class="app-layout">
+    <!-- 侧边栏 -->
+    <AppSidebar v-model:drawer-visible="drawerVisible" />
 
-            <main class="layout-main">
-              <slot />
-            </main>
+    <!-- 主内容区 -->
+    <n-layout>
+      <!-- 顶部导航栏 -->
+      <AppHeader v-model:drawer-visible="drawerVisible" />
 
-            <footer class="layout-footer">
-              <p>&copy; 2026 Narrative Studio - 基于计算叙事学的可视化小说创作与分析工具</p>
-            </footer>
+      <!-- 页面内容 -->
+      <n-layout-content class="app-content">
+        <n-scrollbar style="height: 100%">
+          <div class="content-wrapper">
+            <slot />
           </div>
-        </n-notification-provider>
-      </n-dialog-provider>
-    </n-message-provider>
-  </n-config-provider>
+        </n-scrollbar>
+      </n-layout-content>
+
+      <!-- 底部栏 -->
+      <AppFooter />
+    </n-layout>
+  </n-layout>
 </template>
 
 <script setup lang="ts">
-import { darkTheme } from 'naive-ui'
-import { BookOutline, LibraryOutline, MoonOutline, SunnyOutline } from '@vicons/ionicons5'
+/**
+ * 默认布局
+ * 包含侧边栏、顶部导航栏、内容区和底部栏
+ */
 
-const theme = ref(null)
-
-const toggleTheme = () => {
-  theme.value = theme.value ? null : darkTheme
-}
+// 移动端抽屉状态
+const drawerVisible = ref(false)
 </script>
 
 <style scoped>
-.default-layout {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+.app-layout {
+  height: 100vh;
+  width: 100vw;
 }
 
-.layout-header {
-  background: var(--n-color);
-  border-bottom: 1px solid var(--n-border-color);
-  padding: 0 24px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+.app-content {
+  height: calc(100vh - 64px - 56px); /* 减去 header 和 footer 的高度 */
 }
 
-.header-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 64px;
-}
-
-.logo {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.logo a {
-  color: #18a058;
-  text-decoration: none;
-  transition: opacity 0.3s;
-}
-
-.logo a:hover {
-  opacity: 0.8;
-}
-
-.nav {
-  display: flex;
-  gap: 8px;
-}
-
-.nav-link {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--n-text-color);
-  text-decoration: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  transition: all 0.3s;
-  font-size: 14px;
-}
-
-.nav-link:hover {
-  background: var(--n-color-hover);
-  color: #18a058;
-}
-
-.nav-link.router-link-active {
-  color: #18a058;
-  background: rgba(24, 160, 88, 0.1);
-  font-weight: 500;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.layout-main {
-  flex: 1;
-  max-width: 1400px;
-  width: 100%;
-  margin: 0 auto;
+.content-wrapper {
   padding: 24px;
+  min-height: 100%;
 }
 
-.layout-footer {
-  background: var(--n-color);
-  border-top: 1px solid var(--n-border-color);
-  padding: 24px;
-  text-align: center;
-  color: var(--n-text-color-3);
-}
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .app-content {
+    height: calc(100vh - 56px - 48px); /* 移动端更小的 header 和 footer */
+  }
 
-.layout-footer p {
-  margin: 0;
-  font-size: 14px;
+  .content-wrapper {
+    padding: 16px;
+  }
 }
 </style>

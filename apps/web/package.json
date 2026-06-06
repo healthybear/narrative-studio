@@ -9,7 +9,8 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "type-check": "nuxt typecheck"
+    "type-check": "nuxt typecheck",
+    "test": "vitest run"
   },
   "dependencies": {
     "@pinia/nuxt": "^0.5.1",
@@ -30,7 +31,9 @@
   "devDependencies": {
     "@nuxt/eslint": "^0.5.0",
     "@types/d3": "^7.4.3",
+    "fake-indexeddb": "^6.2.5",
     "typescript": "^5.4.5",
+    "vitest": "^4.1.8",
     "vue-tsc": "^3.3.1"
   }
 }
