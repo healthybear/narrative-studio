@@ -6,6 +6,7 @@ import type {
   CharacterRecord,
   CharacterRelationRecord,
   EmotionRecord,
+  EventDraftInput,
   EventRecord,
   MaterialRecord,
   MetadataRecord,
@@ -18,7 +19,7 @@ import type {
 } from '~/types/novel'
 
 const DB_NAME = 'narrative-studio'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 interface NarrativeStudioDB extends DBSchema {
   novels: {
@@ -74,7 +75,9 @@ interface NarrativeStudioDB extends DBSchema {
     indexes: {
       sceneId: string
       novelId: string
+      order: number
       type: string
+      sceneId_order: [string, number]
       novelId_type: [string, string]
     }
   }
@@ -182,7 +185,9 @@ function ensureSchema(db: IDBDatabase, transaction: IDBTransaction) {
   const events = getOrCreateStore(db, transaction, 'events', { keyPath: 'id' })
   ensureIndex(events, 'sceneId', 'sceneId')
   ensureIndex(events, 'novelId', 'novelId')
+  ensureIndex(events, 'order', 'order')
   ensureIndex(events, 'type', 'type')
+  ensureIndex(events, 'sceneId_order', ['sceneId', 'order'], { unique: true })
   ensureIndex(events, 'novelId_type', ['novelId', 'type'])
 
   const emotions = getOrCreateStore(db, transaction, 'emotions', { keyPath: 'id' })
@@ -381,12 +386,39 @@ export async function listScenesByChapter(chapterId: string) {
   return scenes.sort((left, right) => left.order - right.order)
 }
 
+export async function listEventsByScene(sceneId: string) {
+  const db = await getDB()
+  const events = await db.getAllFromIndex('events', 'sceneId', sceneId)
+  return events.sort((left, right) => left.order - right.order)
+}
+
+export async function listEventsByNovel(novelId: string) {
+  const db = await getDB()
+  const [events, scenes] = await Promise.all([
+    db.getAllFromIndex('events', 'novelId', novelId),
+    listScenesByNovel(novelId),
+  ])
+  const scenePosition = new Map(scenes.map((scene, index) => [scene.id, index]))
+
+  return events.sort((left, right) => {
+    const leftPosition = scenePosition.get(left.sceneId) ?? Number.MAX_SAFE_INTEGER
+    const rightPosition = scenePosition.get(right.sceneId) ?? Number.MAX_SAFE_INTEGER
+
+    if (leftPosition === rightPosition) {
+      return left.order - right.order
+    }
+
+    return leftPosition - rightPosition
+  })
+}
+
 export async function saveChapters(novelId: string, chapters: ChapterDraftInput[]) {
   const db = await getDB()
-  const tx = db.transaction(['novels', 'chapters', 'scenes'], 'readwrite')
+  const tx = db.transaction(['novels', 'chapters', 'scenes', 'events'], 'readwrite')
   const novelStore = tx.objectStore('novels')
   const chapterStore = tx.objectStore('chapters')
   const sceneStore = tx.objectStore('scenes')
+  const eventStore = tx.objectStore('events')
   const novel = await novelStore.get(novelId)
 
   ensureNovelExists(novel)
@@ -399,6 +431,11 @@ export async function saveChapters(novelId: string, chapters: ChapterDraftInput[
   const existingScenes = await sceneStore.index('novelId').getAll(novelId)
   for (const scene of existingScenes) {
     await sceneStore.delete(scene.id)
+  }
+
+  const existingEvents = await eventStore.index('novelId').getAll(novelId)
+  for (const event of existingEvents) {
+    await eventStore.delete(event.id)
   }
 
   const now = new Date().toISOString()
@@ -476,9 +513,20 @@ export async function saveScenes(
   scenes: SceneDraftInput[]
 ) {
   const db = await getDB()
-  const tx = db.transaction('scenes', 'readwrite')
+  const tx = db.transaction(['scenes', 'events'], 'readwrite')
   const store = tx.objectStore('scenes')
+  const eventStore = tx.objectStore('events')
   const existing = await store.index('chapterId').getAll(chapterId)
+  const nextIds = new Set(scenes.map(scene => scene.id).filter((id): id is string => Boolean(id)))
+
+  for (const scene of existing) {
+    if (!nextIds.has(scene.id)) {
+      const relatedEvents = await eventStore.index('sceneId').getAll(scene.id)
+      for (const event of relatedEvents) {
+        await eventStore.delete(event.id)
+      }
+    }
+  }
 
   for (const scene of existing) {
     await store.delete(scene.id)
@@ -510,6 +558,58 @@ export async function saveScenes(
 
   for (const record of records) {
     await store.put(record)
+  }
+
+  await tx.done
+  return records
+}
+
+export async function saveSceneEvents(
+  novelId: string,
+  sceneId: string,
+  events: EventDraftInput[]
+) {
+  const db = await getDB()
+  const tx = db.transaction(['scenes', 'events'], 'readwrite')
+  const sceneStore = tx.objectStore('scenes')
+  const eventStore = tx.objectStore('events')
+  const scene = await sceneStore.get(sceneId)
+
+  if (!scene || scene.novelId !== novelId) {
+    throw new Error('Scene not found')
+  }
+
+  const existing = await eventStore.index('sceneId').getAll(sceneId)
+  const existingById = new Map(existing.map(event => [event.id, event]))
+
+  for (const event of existing) {
+    await eventStore.delete(event.id)
+  }
+
+  const now = new Date().toISOString()
+  const records: EventRecord[] = events
+    .slice()
+    .sort((left, right) => left.order - right.order)
+    .map((event, index) => {
+      const current = event.id ? existingById.get(event.id) : undefined
+
+      return {
+        id: event.id ?? nanoid(),
+        novelId,
+        sceneId,
+        order: index + 1,
+        type: event.type.trim(),
+        title: event.title.trim() || `事件 ${index + 1}`,
+        description: event.description?.trim(),
+        source: event.source,
+        suggestionStatus: event.suggestionStatus,
+        createdAt: current?.createdAt ?? now,
+        updatedAt: now,
+      }
+    })
+
+  for (const record of records) {
+    await eventStore.put(record)
   }
 
   await tx.done

@@ -103,12 +103,28 @@ export interface EventRecord {
   id: string
   novelId: string
   sceneId: string
+  order: number
   type: string
   title: string
   description?: string
+  source: 'manual' | 'ai'
+  suggestionStatus?: 'pending' | 'accepted' | 'rejected'
   createdAt: string
   updatedAt: string
 }
+
+export interface EventDraftInput {
+  id?: string
+  sceneId: string
+  order: number
+  type: string
+  title: string
+  description?: string
+  source: 'manual' | 'ai'
+  suggestionStatus?: 'pending' | 'accepted' | 'rejected'
+}
+
+export interface EventDraft extends Omit<EventRecord, 'novelId' | 'createdAt' | 'updatedAt'> {}
 
 export interface EmotionRecord {
   id: string

@@ -1,14 +1,24 @@
 import { defineStore } from 'pinia'
-import type { ChapterDraftInput, ChapterRecord, NovelProject, SceneDraftInput, SceneRecord } from '~/types/novel'
+import type {
+  ChapterDraftInput,
+  ChapterRecord,
+  EventDraftInput,
+  EventRecord,
+  NovelProject,
+  SceneDraftInput,
+  SceneRecord,
+} from '~/types/novel'
 import {
   createNovelProject,
   deleteNovelProject,
   getNovelProject,
   initializeScenesFromChapters,
   listChaptersByNovel,
+  listEventsByNovel,
   listNovelProjects,
   listScenesByNovel,
   saveChapters,
+  saveSceneEvents as persistSceneEvents,
   saveScenes,
   updateNovelProject,
 } from '~/utils/db'
@@ -27,6 +37,7 @@ export const useNovelStore = defineStore('novel', {
     currentNovel: null as NovelProject | null,
     currentChapters: [] as ChapterRecord[],
     currentScenes: [] as SceneRecord[],
+    currentEvents: [] as EventRecord[],
     loading: false,
     saving: false,
     searchQuery: '',
@@ -109,9 +120,10 @@ export const useNovelStore = defineStore('novel', {
       this.clearError()
 
       try {
-        const [novel, chapters] = await Promise.all([
+        const [novel, chapters, events] = await Promise.all([
           getNovelProject(id),
           listChaptersByNovel(id),
+          listEventsByNovel(id),
         ])
         let scenes = await listScenesByNovel(id)
         if (scenes.length === 0 && chapters.length > 0) {
@@ -121,6 +133,7 @@ export const useNovelStore = defineStore('novel', {
         this.currentNovel = novel
         this.currentChapters = chapters
         this.currentScenes = scenes
+        this.currentEvents = events
 
         const index = this.novels.findIndex(item => item.id === id)
         if (index === -1) {
@@ -190,6 +203,7 @@ export const useNovelStore = defineStore('novel', {
           this.currentNovel = null
           this.currentChapters = []
           this.currentScenes = []
+          this.currentEvents = []
         }
       } catch (error) {
         console.error('Failed to delete novel:', error)
@@ -207,6 +221,8 @@ export const useNovelStore = defineStore('novel', {
       try {
         const records = await saveChapters(novelId, chapters)
         this.currentChapters = records
+        this.currentScenes = []
+        this.currentEvents = []
 
         if (this.currentNovel?.id === novelId) {
           this.currentNovel = await updateNovelProject(novelId, {
@@ -235,7 +251,13 @@ export const useNovelStore = defineStore('novel', {
       this.clearError()
 
       try {
+        const previousChapterSceneIds = new Set(
+          this.currentScenes
+            .filter(scene => scene.chapterId === chapterId)
+            .map(scene => scene.id)
+        )
         const records = await saveScenes(novelId, chapterId, scenes)
+        const validSceneIds = new Set(records.map(scene => scene.id))
         const remaining = this.currentScenes.filter(scene => scene.chapterId !== chapterId)
         this.currentScenes = [...remaining, ...records].sort((left, right) => {
           if (left.chapterId === right.chapterId) {
@@ -243,10 +265,44 @@ export const useNovelStore = defineStore('novel', {
           }
           return left.chapterId.localeCompare(right.chapterId)
         })
+        this.currentEvents = this.currentEvents.filter(event =>
+          !previousChapterSceneIds.has(event.sceneId) || validSceneIds.has(event.sceneId)
+        )
         return records
       } catch (error) {
         console.error('Failed to save scenes:', error)
         this.setError(error instanceof Error ? error.message : 'Failed to save scenes')
+        throw error
+      } finally {
+        this.saving = false
+      }
+    },
+
+    async saveSceneEvents(novelId: string, sceneId: string, events: EventDraftInput[]) {
+      this.saving = true
+      this.clearError()
+
+      try {
+        const records = await persistSceneEvents(novelId, sceneId, events)
+        const remaining = this.currentEvents.filter(event => event.sceneId !== sceneId)
+        const merged = [...remaining, ...records]
+        const scenePosition = new Map(this.currentScenes.map((scene, index) => [scene.id, index]))
+
+        this.currentEvents = merged.sort((left, right) => {
+          const leftPosition = scenePosition.get(left.sceneId) ?? Number.MAX_SAFE_INTEGER
+          const rightPosition = scenePosition.get(right.sceneId) ?? Number.MAX_SAFE_INTEGER
+
+          if (leftPosition === rightPosition) {
+            return left.order - right.order
+          }
+
+          return leftPosition - rightPosition
+        })
+
+        return records
+      } catch (error) {
+        console.error('Failed to save events:', error)
+        this.setError(error instanceof Error ? error.message : 'Failed to save events')
         throw error
       } finally {
         this.saving = false
