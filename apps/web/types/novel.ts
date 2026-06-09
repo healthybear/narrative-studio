@@ -76,7 +76,7 @@ export interface SceneSuggestion {
   status: 'pending' | 'accepted' | 'rejected'
 }
 
-export interface SceneDraft extends Omit<SceneRecord, 'novelId' | 'createdAt' | 'updatedAt'> {}
+export type SceneDraft = Omit<SceneRecord, 'novelId' | 'createdAt' | 'updatedAt'>
 
 export interface CharacterRecord {
   id: string
@@ -124,7 +124,7 @@ export interface EventDraftInput {
   suggestionStatus?: 'pending' | 'accepted' | 'rejected'
 }
 
-export interface EventDraft extends Omit<EventRecord, 'novelId' | 'createdAt' | 'updatedAt'> {}
+export type EventDraft = Omit<EventRecord, 'novelId' | 'createdAt' | 'updatedAt'>
 
 export interface EmotionRecord {
   id: string

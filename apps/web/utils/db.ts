@@ -1,4 +1,11 @@
-import { openDB, type DBSchema, type IDBPDatabase, type StoreNames } from 'idb'
+import {
+  openDB,
+  type DBSchema,
+  type IDBPDatabase,
+  type IDBPObjectStore,
+  type IDBPTransaction,
+  type StoreNames,
+} from 'idb'
 import { nanoid } from 'nanoid'
 import type {
   ChapterDraftInput,
@@ -116,7 +123,7 @@ interface NarrativeStudioDB extends DBSchema {
     value: PatternRecord
     indexes: {
       category: string
-      isCustom: boolean
+      isCustom: number
     }
   }
   metadata: {
@@ -127,12 +134,31 @@ interface NarrativeStudioDB extends DBSchema {
 }
 
 type StoreName = StoreNames<NarrativeStudioDB>
+type UpgradeTransaction = IDBPTransaction<NarrativeStudioDB, StoreName[], 'versionchange'>
+type UpgradeStore<Name extends StoreName> = IDBPObjectStore<
+  NarrativeStudioDB,
+  StoreName[],
+  Name,
+  'versionchange'
+>
+type NovelScopedStoreName =
+  | 'scenes'
+  | 'characters'
+  | 'character_relations'
+  | 'events'
+  | 'emotions'
+  | 'perspectives'
+type NovelBundleStoreName = NovelScopedStoreName | 'materials'
+type CascadeDeleteStoreName = 'chapters' | NovelBundleStoreName
 
 let dbInstance: IDBPDatabase<NarrativeStudioDB> | null = null
 
-function ensureIndex(
-  store: IDBObjectStore,
-  name: string,
+function ensureIndex<
+  Name extends StoreName,
+  IndexName extends keyof NarrativeStudioDB[Name]['indexes'] & string,
+>(
+  store: UpgradeStore<Name>,
+  name: IndexName,
   keyPath: string | string[],
   options?: IDBIndexParameters
 ) {
@@ -141,10 +167,10 @@ function ensureIndex(
   }
 }
 
-function getOrCreateStore(
-  db: IDBDatabase,
-  transaction: IDBTransaction,
-  name: StoreName,
+function getOrCreateStore<Name extends StoreName>(
+  db: IDBPDatabase<NarrativeStudioDB>,
+  transaction: UpgradeTransaction,
+  name: Name,
   options: IDBObjectStoreParameters
 ) {
   if (db.objectStoreNames.contains(name)) {
@@ -154,7 +180,7 @@ function getOrCreateStore(
   return db.createObjectStore(name, options)
 }
 
-function ensureSchema(db: IDBDatabase, transaction: IDBTransaction) {
+function ensureSchema(db: IDBPDatabase<NarrativeStudioDB>, transaction: UpgradeTransaction) {
   const novels = getOrCreateStore(db, transaction, 'novels', { keyPath: 'id' })
   ensureIndex(novels, 'title', 'title')
   ensureIndex(novels, 'createdAt', 'createdAt')
@@ -253,14 +279,16 @@ function createNovelRecord(input: {
 
 function ensureNovelExists(novel: NovelProject | undefined): asserts novel is NovelProject {
   if (!novel) {
-    throw new Error('Novel not found')
+    throw new Error('未找到项目')
   }
 }
 
-async function getAllByNovelId<K extends Exclude<StoreName, 'patterns' | 'metadata'>>(
+async function getAllByNovelId(storeName: 'materials', novelId: string): Promise<MaterialRecord[]>
+async function getAllByNovelId<K extends NovelScopedStoreName>(
   storeName: K,
   novelId: string
-) {
+): Promise<NarrativeStudioDB[K]['value'][]>
+async function getAllByNovelId(storeName: NovelBundleStoreName, novelId: string) {
   const db = await getDB()
 
   if (storeName === 'materials') {
@@ -305,7 +333,7 @@ export async function resetDB() {
   await new Promise<void>((resolve, reject) => {
     const request = indexedDB.deleteDatabase(DB_NAME)
     request.onerror = () => reject(request.error)
-    request.onblocked = () => reject(new Error('Failed to reset database because it is blocked'))
+    request.onblocked = () => reject(new Error('数据库重置失败，当前仍有连接占用'))
     request.onsuccess = () => resolve()
   })
 }
@@ -372,10 +400,12 @@ export async function listChaptersByNovel(novelId: string) {
 export async function listScenesByNovel(novelId: string) {
   const db = await getDB()
   const scenes = await db.getAllFromIndex('scenes', 'novelId', novelId)
+
   return scenes.sort((left, right) => {
     if (left.chapterId === right.chapterId) {
       return left.order - right.order
     }
+
     return left.chapterId.localeCompare(right.chapterId)
   })
 }
@@ -445,7 +475,7 @@ export async function saveChapters(novelId: string, chapters: ChapterDraftInput[
     .map((chapter, index) => ({
       id: chapter.id ?? nanoid(),
       novelId,
-      title: chapter.title.trim() || `Chapter ${index + 1}`,
+      title: chapter.title.trim() || `第 ${index + 1} 章`,
       content: chapter.content,
       order: index + 1,
       startOffset: chapter.startOffset,
@@ -467,7 +497,6 @@ export async function saveChapters(novelId: string, chapters: ChapterDraftInput[
   })
 
   await tx.done
-
   return records
 }
 
@@ -576,7 +605,7 @@ export async function saveSceneEvents(
   const scene = await sceneStore.get(sceneId)
 
   if (!scene || scene.novelId !== novelId) {
-    throw new Error('Scene not found')
+    throw new Error('未找到场景')
   }
 
   const existing = await eventStore.index('sceneId').getAll(sceneId)
@@ -668,26 +697,31 @@ export async function deleteNovelProject(id: string) {
   const novel = await tx.objectStore('novels').get(id)
   ensureNovelExists(novel)
 
-  const deleteByIndex = async <K extends Exclude<StoreName, 'novels' | 'patterns' | 'metadata'>>(
-    storeName: K,
-    indexName: string,
-    value: string
-  ) => {
+  const deleteByIndex = async (storeName: CascadeDeleteStoreName, value: string) => {
+    if (storeName === 'materials') {
+      const store = tx.objectStore('materials')
+      const records = await store.index('sourceNovelId').getAll(value)
+      for (const record of records) {
+        await store.delete(record.id)
+      }
+      return
+    }
+
     const store = tx.objectStore(storeName)
-    const records = await store.index(indexName as never).getAll(value)
+    const records = await store.index('novelId').getAll(value)
     for (const record of records as Array<{ id: string }>) {
       await store.delete(record.id)
     }
   }
 
-  await deleteByIndex('chapters', 'novelId', id)
-  await deleteByIndex('scenes', 'novelId', id)
-  await deleteByIndex('characters', 'novelId', id)
-  await deleteByIndex('character_relations', 'novelId', id)
-  await deleteByIndex('events', 'novelId', id)
-  await deleteByIndex('emotions', 'novelId', id)
-  await deleteByIndex('perspectives', 'novelId', id)
-  await deleteByIndex('materials', 'sourceNovelId', id)
+  await deleteByIndex('chapters', id)
+  await deleteByIndex('scenes', id)
+  await deleteByIndex('characters', id)
+  await deleteByIndex('character_relations', id)
+  await deleteByIndex('events', id)
+  await deleteByIndex('emotions', id)
+  await deleteByIndex('perspectives', id)
+  await deleteByIndex('materials', id)
   await tx.objectStore('novels').delete(id)
   await tx.done
 }

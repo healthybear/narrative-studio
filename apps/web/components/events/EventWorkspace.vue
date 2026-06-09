@@ -1,6 +1,7 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { AddOutline, FlashOutline, SaveOutline } from '@vicons/ionicons5'
+import { useMessage } from 'naive-ui'
 import { useEventAnnotation } from '~/composables/useEventAnnotation'
 
 const props = defineProps<{
@@ -27,16 +28,16 @@ const {
   getEventCount,
 } = useEventAnnotation(props.novelId)
 
-const chapterTitleById = computed(() => {
+const chapterTitleById = computed<Record<string, string>>(() => {
   return Object.fromEntries(
     novelStore.currentChapters.map(chapter => [chapter.id, chapter.title])
-  ) as Record<string, string>
+  )
 })
 
-const eventCounts = computed(() => {
+const eventCounts = computed<Record<string, number>>(() => {
   return Object.fromEntries(
     scenes.value.map(scene => [scene.id, getEventCount(scene.id)])
-  ) as Record<string, number>
+  )
 })
 
 const eventTypeOptions = [
@@ -45,7 +46,7 @@ const eventTypeOptions = [
   { label: '转折', value: 'turning_point' },
   { label: '高潮', value: 'climax' },
   { label: '解决', value: 'resolution' },
-  { label: '收束', value: 'aftermath' },
+  { label: '余波', value: 'aftermath' },
 ]
 
 const eventTypeLabelMap = Object.fromEntries(
@@ -56,13 +57,13 @@ async function handleSave() {
   try {
     const records = await saveSelectedSceneEvents()
     message.success(`已保存 ${records.length} 个事件`)
-  } catch (error: any) {
-    message.error(error?.message || '事件保存失败')
+  } catch (error: unknown) {
+    message.error(error instanceof Error ? error.message : '保存失败')
   }
 }
 
 function handleAutoDetect() {
-  message.info('AI 事件检测入口已预留，后续会在这里接入候选事件建议')
+  message.info('AI 事件检测功能暂未接入')
 }
 
 function handleAddEvent() {
@@ -76,14 +77,14 @@ function handleAddEvent() {
 
 function handleRemoveEvent(eventId: string) {
   removeEvent(eventId)
-  message.success('事件已删除，点击保存后会写入本地存储')
+  message.success('事件已移除，保存后会写入本地数据')
 }
 
 async function initialize() {
   try {
     await loadContext()
-  } catch (error: any) {
-    message.error(error?.message || '加载项目失败')
+  } catch (error: unknown) {
+    message.error(error instanceof Error ? error.message : '加载项目失败')
   }
 }
 
@@ -101,20 +102,23 @@ onMounted(() => {
           <n-tag v-if="novel" type="info">{{ novel.title }}</n-tag>
         </n-space>
       </template>
+
       <template #extra>
         <n-space>
           <n-button :disabled="!selectedScene" @click="handleAutoDetect">
             <template #icon>
               <n-icon :component="FlashOutline" />
             </template>
-            AI 检测预留
+            AI 检测
           </n-button>
+
           <n-button :disabled="!selectedScene" @click="handleAddEvent">
             <template #icon>
               <n-icon :component="AddOutline" />
             </template>
             新增事件
           </n-button>
+
           <n-button
             type="primary"
             :loading="novelStore.saving"
@@ -140,7 +144,7 @@ onMounted(() => {
       {{ novelStore.lastError }}
     </n-alert>
 
-    <n-grid :cols="24" :x-gap="16" :y-gap="16" class="main-grid">
+    <n-grid class="main-grid" :cols="24" :x-gap="16" :y-gap="16">
       <n-grid-item :span="6">
         <EventSceneList
           :scenes="scenes"
@@ -151,46 +155,47 @@ onMounted(() => {
       </n-grid-item>
 
       <n-grid-item :span="10">
-        <n-card title="事件列表" class="panel-card">
+        <n-card class="panel-card" title="事件列表">
           <template #header-extra>
             <n-text v-if="selectedScene" depth="3">
               {{ chapterTitleById[selectedScene.chapterId] || '未命名章节' }}
             </n-text>
           </template>
 
-          <n-empty v-if="!selectedScene" description="先从左侧选择一个场景" />
+          <n-empty v-if="!selectedScene" description="请先从左侧选择一个场景" />
 
           <template v-else>
             <n-space vertical :size="12">
-              <n-alert type="info" title="标注原则">
-                先把场景内关键情节点拆成事件，再逐条补充类型和描述。人物关联与因果关系留到后续阶段。
+              <n-alert type="info" title="标注说明">
+                建议先拆分场景中的关键事件，再逐条补充类型和描述，方便后续分析与回看。
               </n-alert>
 
               <n-empty
                 v-if="!selectedSceneEvents.length"
-                description="当前场景还没有事件，点击右上角“新增事件”开始"
+                description="当前场景还没有事件，点击右上角“新增事件”开始标注"
               />
 
               <n-card
-                v-for="event in selectedSceneEvents"
-                :key="event.id"
-                size="small"
+                v-for="sceneEvent in selectedSceneEvents"
+                :key="sceneEvent.id"
                 class="event-card"
-                :class="{ selected: selectedEvent?.id === event.id }"
-                @click="selectEvent(event.id)"
+                :class="{ selected: selectedEvent?.id === sceneEvent.id }"
+                size="small"
+                @click="selectEvent(sceneEvent.id)"
               >
                 <n-space vertical :size="8">
                   <n-space justify="space-between" align="center">
                     <n-space align="center">
-                      <n-tag size="small" type="primary">#{{ event.order }}</n-tag>
-                      <n-text strong>{{ event.title }}</n-text>
+                      <n-tag size="small" type="primary">#{{ sceneEvent.order }}</n-tag>
+                      <n-text strong>{{ sceneEvent.title }}</n-text>
                     </n-space>
                     <n-tag size="small" :bordered="false">
-                      {{ eventTypeLabelMap[event.type] || '未分类' }}
+                      {{ eventTypeLabelMap[sceneEvent.type] || '未分类' }}
                     </n-tag>
                   </n-space>
+
                   <n-text depth="3">
-                    {{ event.description || '暂无描述，建议补充该事件的动作、冲突或结果。' }}
+                    {{ sceneEvent.description || '请补充该事件的简要说明。' }}
                   </n-text>
                 </n-space>
               </n-card>

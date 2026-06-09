@@ -28,14 +28,15 @@ export function normalizeEventDrafts(drafts: EventDraft[]): EventDraft[] {
     }
   }
 
-  return sceneIds.flatMap((sceneId) => {
-    return drafts
+  return sceneIds.flatMap(sceneId =>
+    drafts
       .filter(draft => draft.sceneId === sceneId)
       .slice()
       .sort((left, right) => {
         if (left.order === right.order) {
           return left.id.localeCompare(right.id)
         }
+
         return left.order - right.order
       })
       .map((draft, index) => {
@@ -49,7 +50,7 @@ export function normalizeEventDrafts(drafts: EventDraft[]): EventDraft[] {
           description: draft.description?.trim() ?? '',
         }
       })
-  })
+  )
 }
 
 export function appendEventDraft(drafts: EventDraft[], sceneId: string) {

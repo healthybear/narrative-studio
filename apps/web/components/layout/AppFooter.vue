@@ -2,7 +2,7 @@
   <n-layout-footer bordered class="app-footer">
     <div class="footer-content">
       <div class="footer-left">
-        <span class="copyright">© 2026 Narrative Studio</span>
+        <span class="copyright">© {{ currentYear }} Narrative Studio</span>
         <n-divider vertical />
         <span class="version">v{{ version }}</span>
       </div>
@@ -19,30 +19,20 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 应用底部栏组件
- * 显示版权信息、版本号、快捷链接等
- */
-
-// 版本号（从 package.json 读取）
+const currentYear = new Date().getFullYear()
 const version = '0.1.0'
+const message = useMessage()
 
-// 打开文档
-const openDocs = () => {
-  console.log('打开文档')
-  // TODO: 打开文档页面
+function openDocs() {
+  message.warning('文档中心暂未开放')
 }
 
-// 打开 GitHub
-const openGithub = () => {
-  console.log('打开 GitHub')
-  // TODO: 打开 GitHub 仓库
+function openGithub() {
+  message.warning('GitHub 链接暂未配置')
 }
 
-// 打开反馈
-const openFeedback = () => {
-  console.log('打开反馈')
-  // TODO: 打开反馈表单
+function openFeedback() {
+  message.warning('反馈入口暂未开放')
 }
 </script>
 
@@ -54,14 +44,14 @@ const openFeedback = () => {
 
 .footer-content {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
 .footer-left {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
   color: #666;
   font-size: 14px;
 }
@@ -78,8 +68,8 @@ const openFeedback = () => {
 
 .footer-link {
   color: #666;
-  text-decoration: none;
   font-size: 14px;
+  text-decoration: none;
   transition: color 0.3s;
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <div ref="chartRef" class="emotion-line-chart"></div>
+  <div ref="chartRef" class="emotion-line-chart" />
 </template>
 
 <script setup lang="ts">
@@ -17,6 +17,8 @@ interface EmotionData {
   negative: number // 消极情感值 (0-100)
   neutral: number // 中性情感值 (0-100)
 }
+
+type TooltipFormatterParams = Array<{ dataIndex?: number }> | { dataIndex?: number }
 
 interface Props {
   data: EmotionData[]
@@ -52,10 +54,15 @@ const initChart = () => {
       axisPointer: {
         type: 'cross',
       },
-      formatter: (params: any) => {
-        const data = params[0]
-        const index = data.dataIndex
+      formatter: (params: TooltipFormatterParams) => {
+        const data = Array.isArray(params) ? params[0] : params
+        const index = data?.dataIndex
+
+        if (typeof index !== 'number') return ''
         const item = props.data[index]
+
+        // 处理可能为 undefined 的情况
+        if (!item) return ''
 
         return `
           <div style="padding: 8px;">

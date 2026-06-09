@@ -20,11 +20,11 @@ interface ChapterBoundaryAdjustment {
 }
 
 const CHAPTER_PATTERNS = [
-  /^(第[0-9一二三四五六七八九十百千零两〇]+章[^\n\r]*)$/gmu,
-  /^(第[0-9一二三四五六七八九十百千零两〇]+节[^\n\r]*)$/gmu,
+  /^(第[0-9一二三四五六七八九十百千万零两〇]+章[^\n\r]*)$/gmu,
+  /^(第[0-9一二三四五六七八九十百千万零两〇]+节[^\n\r]*)$/gmu,
   /^(chapter\s+[0-9ivxlcdm]+[^\n\r]*)$/gimu,
-  /^([一二三四五六七八九十百千零两〇]+、[^\n\r]*)$/gmu,
-  /^([0-9]+[、.．][^\n\r]*)$/gmu,
+  /^([一二三四五六七八九十百千万零两〇]+、[^\n\r]*)$/gmu,
+  /^([0-9]+[、.．-][^\n\r]*)$/gmu,
 ]
 
 function isLikelyChapterTitle(title: string) {
@@ -38,7 +38,7 @@ function isLikelyChapterTitle(title: string) {
     return false
   }
 
-  if (/[。！？；，,]$/.test(normalized)) {
+  if (/[。！？；?]$/.test(normalized)) {
     return false
   }
 

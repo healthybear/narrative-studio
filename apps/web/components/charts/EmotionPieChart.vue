@@ -1,5 +1,5 @@
 <template>
-  <div ref="chartRef" class="emotion-pie-chart"></div>
+  <div ref="chartRef" class="emotion-pie-chart" />
 </template>
 
 <script setup lang="ts">
@@ -16,6 +16,10 @@ interface EmotionStat {
   value: number // 数值
   color: string // 颜色
 }
+
+type TooltipFormatterParams =
+  | Array<{ percent?: number; name?: string; value?: unknown }>
+  | { percent?: number; name?: string; value?: unknown }
 
 interface Props {
   data: EmotionStat[]
@@ -48,9 +52,12 @@ const initChart = () => {
     },
     tooltip: {
       trigger: 'item',
-      formatter: (params: any) => {
-        const percent = params.percent.toFixed(1)
-        return `${params.name}: ${params.value} (${percent}%)`
+      formatter: (params: TooltipFormatterParams) => {
+        const item = Array.isArray(params) ? params[0] : params
+        if (!item) return ''
+
+        const percent = typeof item.percent === 'number' ? item.percent.toFixed(1) : '0.0'
+        return `${item.name}: ${String(item.value)} (${percent}%)`
       },
     },
     legend: {

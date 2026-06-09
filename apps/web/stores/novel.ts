@@ -107,8 +107,8 @@ export const useNovelStore = defineStore('novel', {
       try {
         this.novels = await listNovelProjects()
       } catch (error) {
-        console.error('Failed to load novels:', error)
-        this.setError(error instanceof Error ? error.message : 'Failed to load projects')
+        console.error('加载项目列表失败:', error)
+        this.setError(error instanceof Error ? error.message : '加载项目列表失败')
         throw error
       } finally {
         this.loading = false
@@ -144,8 +144,8 @@ export const useNovelStore = defineStore('novel', {
 
         return novel
       } catch (error) {
-        console.error('Failed to load novel:', error)
-        this.setError(error instanceof Error ? error.message : 'Failed to load project')
+        console.error('加载项目失败:', error)
+        this.setError(error instanceof Error ? error.message : '加载项目失败')
         throw error
       } finally {
         this.loading = false
@@ -161,8 +161,8 @@ export const useNovelStore = defineStore('novel', {
         this.novels.unshift(novel)
         return novel
       } catch (error) {
-        console.error('Failed to create novel:', error)
-        this.setError(error instanceof Error ? error.message : 'Failed to create project')
+        console.error('创建项目失败:', error)
+        this.setError(error instanceof Error ? error.message : '创建项目失败')
         throw error
       } finally {
         this.saving = false
@@ -184,8 +184,8 @@ export const useNovelStore = defineStore('novel', {
         }
         return updated
       } catch (error) {
-        console.error('Failed to update novel:', error)
-        this.setError(error instanceof Error ? error.message : 'Failed to update project')
+        console.error('更新项目失败:', error)
+        this.setError(error instanceof Error ? error.message : '更新项目失败')
         throw error
       } finally {
         this.saving = false
@@ -206,8 +206,8 @@ export const useNovelStore = defineStore('novel', {
           this.currentEvents = []
         }
       } catch (error) {
-        console.error('Failed to delete novel:', error)
-        this.setError(error instanceof Error ? error.message : 'Failed to delete project')
+        console.error('删除项目失败:', error)
+        this.setError(error instanceof Error ? error.message : '删除项目失败')
         throw error
       } finally {
         this.saving = false
@@ -238,8 +238,8 @@ export const useNovelStore = defineStore('novel', {
 
         return records
       } catch (error) {
-        console.error('Failed to save chapters:', error)
-        this.setError(error instanceof Error ? error.message : 'Failed to save chapters')
+        console.error('保存章节失败:', error)
+        this.setError(error instanceof Error ? error.message : '保存章节失败')
         throw error
       } finally {
         this.saving = false
@@ -270,8 +270,8 @@ export const useNovelStore = defineStore('novel', {
         )
         return records
       } catch (error) {
-        console.error('Failed to save scenes:', error)
-        this.setError(error instanceof Error ? error.message : 'Failed to save scenes')
+        console.error('保存场景失败:', error)
+        this.setError(error instanceof Error ? error.message : '保存场景失败')
         throw error
       } finally {
         this.saving = false
@@ -301,8 +301,8 @@ export const useNovelStore = defineStore('novel', {
 
         return records
       } catch (error) {
-        console.error('Failed to save events:', error)
-        this.setError(error instanceof Error ? error.message : 'Failed to save events')
+        console.error('保存事件失败:', error)
+        this.setError(error instanceof Error ? error.message : '保存事件失败')
         throw error
       } finally {
         this.saving = false

@@ -37,7 +37,7 @@ describe('scene segmentation', () => {
       },
     ])
 
-    const scenes = splitSceneAtOffset('第一段。第二段。第三段。', [source!], source!.id, 4)
+    const scenes = splitSceneAtOffset('第一段。第二段。第三段。', [source!], source!.id!, 4)
 
     expect(scenes).toHaveLength(2)
     expect(scenes.map(scene => scene.order)).toEqual([1, 2])
@@ -56,8 +56,8 @@ describe('scene segmentation', () => {
         endOffset: 8,
       },
     ])
-    const split = splitSceneAtOffset('第一段。第二段。', scenes, scenes[0]!.id, 4)
-    const merged = mergeSceneWithPrevious('第一段。第二段。', split, split[1]!.id)
+    const split = splitSceneAtOffset('第一段。第二段。', scenes, scenes[0]!.id!, 4)
+    const merged = mergeSceneWithPrevious('第一段。第二段。', split, split[1]!.id!)
 
     expect(merged).toHaveLength(1)
     expect(merged[0]?.content).toBe('第一段。第二段。')

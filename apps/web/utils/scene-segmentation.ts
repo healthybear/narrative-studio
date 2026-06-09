@@ -1,7 +1,10 @@
 import { nanoid } from 'nanoid'
 import type { ChapterDraftInput, SceneDraftInput, SceneSuggestion } from '~/types/novel'
 
-interface ChapterSeed extends Pick<ChapterDraftInput, 'id' | 'title' | 'content' | 'order' | 'startOffset' | 'endOffset'> {}
+type ChapterSeed = Pick<
+  ChapterDraftInput,
+  'id' | 'title' | 'content' | 'order' | 'startOffset' | 'endOffset'
+>
 
 function sortScenes(scenes: SceneDraftInput[]) {
   return scenes
@@ -36,8 +39,6 @@ export function createInitialSceneDrafts(chapters: ChapterSeed[]): SceneDraftInp
     characterIds: [],
     source: 'manual',
     chapterId: chapter.id ?? `chapter-${chapter.order}`,
-  } as SceneDraftInput & { chapterId: string })).map(scene => ({
-    ...scene,
   })) as SceneDraftInput[]
 }
 
@@ -49,11 +50,11 @@ export function splitSceneAtOffset(
 ) {
   const source = scenes.find(scene => scene.id === sceneId)
   if (!source) {
-    throw new Error('Scene not found')
+    throw new Error('未找到场景')
   }
 
   if (offset <= source.startOffset || offset >= source.endOffset) {
-    throw new Error('Split offset is outside the selected scene')
+    throw new Error('拆分位置不在当前场景范围内')
   }
 
   const index = scenes.findIndex(scene => scene.id === sceneId)
@@ -81,7 +82,7 @@ export function mergeSceneWithPrevious(
 ) {
   const index = scenes.findIndex(scene => scene.id === sceneId)
   if (index <= 0) {
-    throw new Error('No previous scene to merge into')
+    throw new Error('当前场景前面没有可合并的场景')
   }
 
   const previous = scenes[index - 1]!
@@ -109,7 +110,7 @@ export function acceptSceneSuggestion(
   )
 
   if (!target?.id) {
-    throw new Error('No matching scene for suggestion')
+    throw new Error('没有找到可应用建议的场景')
   }
 
   const splitScenes = splitSceneAtOffset(chapterContent, scenes, target.id, suggestion.startOffset)

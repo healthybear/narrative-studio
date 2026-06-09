@@ -1,7 +1,7 @@
-<template>
-  <!-- 桌面端：侧边栏 -->
+﻿<template>
   <n-layout-sider
     v-if="!isMobile"
+    class="app-sidebar"
     bordered
     collapse-mode="width"
     :collapsed-width="64"
@@ -10,7 +10,6 @@
     show-trigger
     @collapse="collapsed = true"
     @expand="collapsed = false"
-    class="app-sidebar"
   >
     <n-scrollbar style="height: 100%">
       <n-menu
@@ -24,7 +23,6 @@
     </n-scrollbar>
   </n-layout-sider>
 
-  <!-- 移动端：抽屉 -->
   <n-drawer
     v-else
     v-model:show="drawerVisible"
@@ -42,55 +40,33 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 应用侧边栏组件
- * 提供主导航菜单
- */
-import { h } from 'vue'
-import { NIcon } from 'naive-ui'
-import type { MenuOption } from 'naive-ui'
+import { h, type Component } from 'vue'
 import {
+  BarChartOutline,
+  EyeOutline,
+  FlashOutline,
   FolderOpenOutline,
   GitNetworkOutline,
-  FlashOutline,
-  PeopleOutline,
   HeartOutline,
-  EyeOutline,
-  BarChartOutline,
   LibraryOutline,
+  PeopleOutline,
 } from '@vicons/ionicons5'
+import { NIcon } from 'naive-ui'
+import type { MenuOption } from 'naive-ui'
 
-// 路由
 const route = useRoute()
 const router = useRouter()
+const novelStore = useNovelStore()
 
-// 侧边栏折叠状态
 const collapsed = ref(false)
-
-// 移动端抽屉状态
 const drawerVisible = defineModel<boolean>('drawerVisible', { default: false })
-
-// 响应式断点
 const isMobile = ref(false)
 
-// 检测屏幕尺寸
-const checkScreenSize = () => {
-  isMobile.value = window.innerWidth < 768
-}
+const currentNovel = computed(() => novelStore.currentNovel)
 
-// 监听窗口大小变化
-onMounted(() => {
-  checkScreenSize()
-  window.addEventListener('resize', checkScreenSize)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', checkScreenSize)
-})
-
-// 当前激活的菜单项
 const activeKey = computed(() => {
   const path = route.path
+
   if (path === '/' || path.startsWith('/novels')) return 'novels'
   if (path.includes('/structure')) return 'structure'
   if (path.includes('/events')) return 'events'
@@ -99,16 +75,15 @@ const activeKey = computed(() => {
   if (path.includes('/perspective')) return 'perspective'
   if (path.includes('/analysis')) return 'analysis'
   if (path.includes('/library')) return 'library'
+
   return 'novels'
 })
 
-// 渲染图标
-const renderIcon = (icon: any) => {
+function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
 }
 
-// 菜单选项
-const menuOptions: MenuOption[] = [
+const menuOptions = computed<MenuOption[]>(() => [
   {
     label: '项目管理',
     key: 'novels',
@@ -116,92 +91,102 @@ const menuOptions: MenuOption[] = [
   },
   {
     type: 'divider',
-    key: 'd1',
+    key: 'divider-1',
   },
   {
     label: '结构标注',
     key: 'structure',
     icon: renderIcon(GitNetworkOutline),
-    disabled: !useNovelStore().currentNovel,
+    disabled: !currentNovel.value,
   },
   {
     label: '事件标注',
     key: 'events',
     icon: renderIcon(FlashOutline),
-    disabled: !useNovelStore().currentNovel,
+    disabled: !currentNovel.value,
   },
   {
-    label: '人物建模',
+    label: '角色建模',
     key: 'characters',
     icon: renderIcon(PeopleOutline),
-    disabled: !useNovelStore().currentNovel,
+    disabled: !currentNovel.value,
   },
   {
     label: '情感分析',
     key: 'emotions',
     icon: renderIcon(HeartOutline),
-    disabled: !useNovelStore().currentNovel,
+    disabled: !currentNovel.value,
   },
   {
     label: '叙事视角',
     key: 'perspective',
     icon: renderIcon(EyeOutline),
-    disabled: !useNovelStore().currentNovel,
+    disabled: !currentNovel.value,
   },
   {
     label: '分析结果',
     key: 'analysis',
     icon: renderIcon(BarChartOutline),
-    disabled: !useNovelStore().currentNovel,
+    disabled: !currentNovel.value,
   },
   {
     type: 'divider',
-    key: 'd2',
+    key: 'divider-2',
   },
   {
     label: '素材库',
     key: 'library',
     icon: renderIcon(LibraryOutline),
   },
-]
+])
 
-// 处理菜单选择
-const handleMenuSelect = (key: string) => {
-  const novelStore = useNovelStore()
-  const currentNovelId = novelStore.currentNovel?.id
+function checkScreenSize() {
+  isMobile.value = window.innerWidth < 768
+}
 
-  // 移动端关闭抽屉
+function handleMenuSelect(key: string) {
+  const currentNovelId = currentNovel.value?.id
+
   if (isMobile.value) {
     drawerVisible.value = false
   }
 
   switch (key) {
     case 'novels':
-      router.push('/novels')
+      void router.push('/novels')
       break
     case 'structure':
-      if (currentNovelId) router.push(`/novel/${currentNovelId}/structure`)
+      if (currentNovelId) void router.push(`/novel/${currentNovelId}/structure`)
       break
     case 'events':
-      if (currentNovelId) router.push(`/novel/${currentNovelId}/events`)
+      if (currentNovelId) void router.push(`/novel/${currentNovelId}/events`)
       break
     case 'characters':
-      if (currentNovelId) router.push(`/novel/${currentNovelId}/characters`)
+      if (currentNovelId) void router.push(`/novel/${currentNovelId}/characters`)
       break
     case 'emotions':
-      if (currentNovelId) router.push(`/novel/${currentNovelId}/emotions`)
+      if (currentNovelId) void router.push(`/novel/${currentNovelId}/emotions`)
       break
     case 'perspective':
-      if (currentNovelId) router.push(`/novel/${currentNovelId}/perspective`)
+      if (currentNovelId) void router.push(`/novel/${currentNovelId}/perspective`)
       break
     case 'analysis':
-      if (currentNovelId) router.push(`/novel/${currentNovelId}/analysis`)
+      if (currentNovelId) void router.push(`/novel/${currentNovelId}/analysis`)
       break
     case 'library':
-      router.push('/library')
+      void router.push('/library')
       break
   }
 }
+
+onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', checkScreenSize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', checkScreenSize)
+})
 </script>
 
 <style scoped>

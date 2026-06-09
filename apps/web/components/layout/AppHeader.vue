@@ -1,9 +1,7 @@
 <template>
   <n-layout-header bordered class="app-header">
     <div class="header-content">
-      <!-- Logo 和标题 -->
       <div class="header-left">
-        <!-- 移动端菜单按钮 -->
         <n-button
           v-if="isMobile"
           text
@@ -22,20 +20,17 @@
         </NuxtLink>
       </div>
 
-      <!-- 右侧操作区 -->
       <div class="header-right">
         <n-space :size="isMobile ? 8 : 16">
-          <!-- 当前项目信息 -->
           <div v-if="currentNovel && !isMobile" class="current-novel">
             <n-tag type="info" size="medium">
               {{ currentNovel.title }}
             </n-tag>
           </div>
 
-          <!-- 主题切换 -->
           <n-button
             text
-            :title="isDark ? '切换到亮色模式' : '切换到暗色模式'"
+            :title="isDark ? '切换到浅色模式' : '切换到深色模式'"
             @click="toggleDark"
           >
             <template #icon>
@@ -45,9 +40,8 @@
             </template>
           </n-button>
 
-          <!-- 用户菜单 -->
           <n-dropdown :options="userMenuOptions" @select="handleUserMenuSelect">
-            <n-button text>
+            <n-button text title="用户菜单">
               <template #icon>
                 <n-icon :size="20">
                   <PersonCircleOutline />
@@ -62,47 +56,17 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 应用顶部导航栏组件
- * 显示 Logo、当前项目、主题切换、用户菜单等
- */
-import { PersonCircleOutline, MoonOutline, SunnyOutline, MenuOutline } from '@vicons/ionicons5'
+import { MenuOutline, MoonOutline, PersonCircleOutline, SunnyOutline } from '@vicons/ionicons5'
 import type { DropdownOption } from 'naive-ui'
 
-// Props
 const drawerVisible = defineModel<boolean>('drawerVisible', { default: false })
-
-// 主题配置
 const { isDark, toggleDark } = useTheme()
-
-// 小说 store
 const novelStore = useNovelStore()
-const currentNovel = computed(() => novelStore.currentNovel)
+const message = useMessage()
 
-// 响应式断点
+const currentNovel = computed(() => novelStore.currentNovel)
 const isMobile = ref(false)
 
-// 检测屏幕尺寸
-const checkScreenSize = () => {
-  isMobile.value = window.innerWidth < 768
-}
-
-// 监听窗口大小变化
-onMounted(() => {
-  checkScreenSize()
-  window.addEventListener('resize', checkScreenSize)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', checkScreenSize)
-})
-
-// 切换抽屉
-const toggleDrawer = () => {
-  drawerVisible.value = !drawerVisible.value
-}
-
-// 用户菜单选项
 const userMenuOptions: DropdownOption[] = [
   {
     label: '设置',
@@ -114,7 +78,7 @@ const userMenuOptions: DropdownOption[] = [
   },
   {
     type: 'divider',
-    key: 'd1',
+    key: 'divider-1',
   },
   {
     label: '关于',
@@ -122,45 +86,58 @@ const userMenuOptions: DropdownOption[] = [
   },
 ]
 
-// 处理用户菜单选择
-const handleUserMenuSelect = (key: string) => {
+function checkScreenSize() {
+  isMobile.value = window.innerWidth < 768
+}
+
+function toggleDrawer() {
+  drawerVisible.value = !drawerVisible.value
+}
+
+function handleUserMenuSelect(key: string | number) {
   switch (key) {
     case 'settings':
-      // TODO: 打开设置页面
-      console.log('打开设置')
+      message.warning('设置功能暂未开放')
       break
     case 'help':
-      // TODO: 打开帮助文档
-      console.log('打开帮助')
+      message.warning('帮助中心暂未开放')
       break
     case 'about':
-      // TODO: 显示关于对话框
-      console.log('关于应用')
+      message.info('关于页面暂未开放')
       break
   }
 }
+
+onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', checkScreenSize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', checkScreenSize)
+})
 </script>
 
 <style scoped>
 .app-header {
-  height: 64px;
   display: flex;
   align-items: center;
+  height: 64px;
   padding: 0 24px;
   background: #ffffff;
 }
 
 .header-content {
-  width: 100%;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .header-left {
   display: flex;
-  align-items: center;
   gap: 12px;
+  align-items: center;
 }
 
 .menu-button {
@@ -168,8 +145,8 @@ const handleUserMenuSelect = (key: string) => {
 }
 
 .logo-link {
-  text-decoration: none;
   color: inherit;
+  text-decoration: none;
 }
 
 .logo-title {
@@ -189,11 +166,10 @@ const handleUserMenuSelect = (key: string) => {
   align-items: center;
 }
 
-/* 移动端适配 */
 @media (max-width: 768px) {
   .app-header {
-    padding: 0 16px;
     height: 56px;
+    padding: 0 16px;
   }
 
   .logo-title {

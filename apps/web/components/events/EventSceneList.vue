@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { SceneRecord } from '~/types/novel'
 
 defineProps<{
@@ -13,7 +13,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <n-card title="场景" class="panel-card">
+  <n-card title="场景列表" class="panel-card">
     <n-empty v-if="!scenes.length" description="当前项目还没有可标注的场景" />
     <n-space v-else vertical :size="10">
       <n-card
@@ -27,9 +27,7 @@ const emit = defineEmits<{
         <n-space vertical :size="6">
           <n-space justify="space-between" align="center">
             <n-text strong>{{ scene.title }}</n-text>
-            <n-tag size="small" type="info">
-              {{ eventCounts[scene.id] ?? 0 }} 个事件
-            </n-tag>
+            <n-tag size="small" type="info">{{ eventCounts[scene.id] ?? 0 }} 个事件</n-tag>
           </n-space>
           <n-text depth="3">字数：{{ scene.wordCount }}</n-text>
           <n-text depth="3">范围：{{ scene.startOffset }} - {{ scene.endOffset }}</n-text>

@@ -59,7 +59,7 @@ describe('database schema and project crud', () => {
   it('supports full project crud and cascades related scenes', async () => {
     const project = await createNovelProject({
       title: '测试项目',
-      author: '作者',
+      author: '测试作者',
       rawText: '第一章 开场\n内容\n第二章 发展\n内容',
     })
 
@@ -116,7 +116,7 @@ describe('database schema and project crud', () => {
     expect(exported.scenes).toHaveLength(3)
 
     await deleteNovelProject(project.id)
-    await expect(getNovelProjectBundle(project.id)).rejects.toThrow('Novel not found')
+    await expect(getNovelProjectBundle(project.id)).rejects.toThrow('未找到项目')
   })
 
   it('saves events by scene, keeps order, and replaces previous scene events', async () => {
@@ -145,6 +145,7 @@ describe('database schema and project crud', () => {
 
     const saved = await saveSceneEvents(project.id, firstScene!.id, [
       {
+        sceneId: firstScene!.id,
         title: 'Arrival',
         type: 'setup',
         order: 2,
@@ -152,6 +153,7 @@ describe('database schema and project crud', () => {
         source: 'manual',
       },
       {
+        sceneId: firstScene!.id,
         title: 'Argument',
         type: 'conflict',
         order: 1,
@@ -175,6 +177,7 @@ describe('database schema and project crud', () => {
     const replaced = await saveSceneEvents(project.id, firstScene!.id, [
       {
         id: saved[0]!.id,
+        sceneId: firstScene!.id,
         title: 'Argument Escalates',
         type: 'conflict',
         order: 1,
@@ -213,6 +216,7 @@ describe('database schema and project crud', () => {
 
     await saveSceneEvents(project.id, scene!.id, [
       {
+        sceneId: scene!.id,
         title: 'Existing Event',
         type: 'setup',
         order: 1,
@@ -255,6 +259,7 @@ describe('database schema and project crud', () => {
 
     await saveSceneEvents(project.id, nextScene!.id, [
       {
+        sceneId: nextScene!.id,
         title: 'Fresh Event',
         type: 'turning_point',
         order: 1,
@@ -272,7 +277,7 @@ describe('database schema and project crud', () => {
   })
 
   it('throws when exporting a missing project', async () => {
-    await expect(exportNovelProject('missing')).rejects.toThrow('Novel not found')
+    await expect(exportNovelProject('missing')).rejects.toThrow('未找到项目')
   })
 
   it('clears open connections on reset', async () => {
