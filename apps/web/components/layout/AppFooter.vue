@@ -19,6 +19,8 @@
 </template>
 
 <script setup lang="ts">
+import { useMessage } from 'naive-ui'
+
 const currentYear = new Date().getFullYear()
 const version = '0.1.0'
 const message = useMessage()

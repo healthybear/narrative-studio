@@ -15,6 +15,8 @@
 </template>
 
 <script setup lang="ts">
+import { useMessage } from 'naive-ui'
+
 const message = useMessage()
 
 function handleCreateNovel() {

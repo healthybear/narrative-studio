@@ -9,7 +9,7 @@
     "lint": "turbo lint",
     "test": "turbo test",
     "type-check": "turbo type-check",
-    "clean": "turbo clean && rimraf node_modules",
+    "clean": "turbo clean && rimraf node_modules apps/*/node_modules packages/*/node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {

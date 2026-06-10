@@ -2,7 +2,13 @@ import { defineConfig, presetAttributify, presetUno } from 'unocss'
 
 export default defineConfig({
   content: {
-    filesystem: ['app.vue', 'components/**/*.{vue,ts}', 'layouts/**/*.vue', 'pages/**/*.vue'],
+    filesystem: [
+      'app.vue',
+      'components/**/*.{vue,ts}',
+      'features/**/*.{vue,ts}',
+      'layouts/**/*.vue',
+      'pages/**/*.vue',
+    ],
   },
   presets: [presetUno(), presetAttributify()],
   theme: {

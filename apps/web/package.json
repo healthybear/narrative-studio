@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@pinia/nuxt": "^0.5.1",
-    "@unocss/nuxt": "^66.5.4",
     "@vicons/ionicons5": "^0.13.0",
     "@vueuse/core": "^10.9.0",
     "d3": "^7.9.0",
@@ -33,6 +32,7 @@
     "@nuxt/eslint": "^0.5.0",
     "@types/d3": "^7.4.3",
     "@vue/test-utils": "^2.4.6",
+    "@unocss/nuxt": "^66.5.4",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^27.1.0",
     "sass": "^1.89.2",

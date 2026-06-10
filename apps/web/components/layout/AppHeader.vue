@@ -57,7 +57,7 @@
 
 <script setup lang="ts">
 import { MenuOutline, MoonOutline, PersonCircleOutline, SunnyOutline } from '@vicons/ionicons5'
-import type { DropdownOption } from 'naive-ui'
+import { useMessage, type DropdownOption } from 'naive-ui'
 
 const drawerVisible = defineModel<boolean>('drawerVisible', { default: false })
 const { isDark, toggleDark } = useTheme()
