@@ -4,7 +4,7 @@ import { MenuOutline, MoonOutline, PersonCircleOutline, SunnyOutline } from '@vi
 import { useMessage, type DropdownOption } from 'naive-ui'
 import { useResponsive } from '~/composables/app/useResponsive'
 import { useAppTheme } from '~/composables/app/useAppTheme'
-import { useNovelStore } from '~/stores/novel'
+import { useNovelStore } from '~/features/novel/stores/novel'
 import { useAppStore } from '~/stores/app'
 
 const appStore = useAppStore()
@@ -169,3 +169,4 @@ function handleUserMenuSelect(key: string | number) {
   }
 }
 </style>
+

@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+﻿import { defineStore } from 'pinia'
 import type {
   ChapterDraftInput,
   ChapterRecord,
@@ -7,7 +7,7 @@ import type {
   NovelProject,
   SceneDraftInput,
   SceneRecord,
-} from '~/types/novel'
+} from '~/features/novel/types/novel'
 import {
   createNovelProject,
   deleteNovelProject,
@@ -323,3 +323,4 @@ export const useNovelStore = defineStore('novel', {
     },
   },
 })
+

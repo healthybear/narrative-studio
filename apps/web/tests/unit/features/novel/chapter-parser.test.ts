@@ -3,7 +3,7 @@ import {
   adjustChapterBoundaries,
   detectChapters,
   serializeChapterDrafts,
-} from '~/utils/chapter-parser'
+} from '~/features/novel/utils/chapter-parser'
 
 describe('chapter parser', () => {
   it('detects common Chinese and English chapter headings', () => {

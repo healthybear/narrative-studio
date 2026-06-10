@@ -1,5 +1,5 @@
-import { nanoid } from 'nanoid'
-import type { ChapterDraftInput } from '~/types/novel'
+﻿import { nanoid } from 'nanoid'
+import type { ChapterDraftInput } from '~/features/novel/types/novel'
 
 export interface DetectedChapter {
   id: string
@@ -24,7 +24,7 @@ const CHAPTER_PATTERNS = [
   /^(第[0-9一二三四五六七八九十百千万零两〇]+节[^\n\r]*)$/gmu,
   /^(chapter\s+[0-9ivxlcdm]+[^\n\r]*)$/gimu,
   /^([一二三四五六七八九十百千万零两〇]+、[^\n\r]*)$/gmu,
-  /^([0-9]+[、.．-][^\n\r]*)$/gmu,
+  /^([0-9]+[、.．][^\n\r]*)$/gmu,
 ]
 
 function isLikelyChapterTitle(title: string) {
@@ -123,7 +123,7 @@ export function adjustChapterBoundaries(
 ): DetectedChapter[] {
   const adjustmentMap = new Map(adjustments.map(item => [item.chapterId, item]))
   const sorted = [...chapters]
-    .map(chapter => {
+    .map((chapter) => {
       const adjustment = adjustmentMap.get(chapter.id)
       const startOffset = adjustment?.startOffset ?? chapter.startOffset
       const endOffset = adjustment?.endOffset ?? chapter.endOffset

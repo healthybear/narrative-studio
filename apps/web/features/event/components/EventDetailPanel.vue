@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import type { EventDraft, SceneRecord } from '~/types/novel'
+import type { EventDraft, SceneRecord } from '~/features/novel/types/novel'
 
 defineProps<{
   scene: SceneRecord | null
@@ -93,3 +93,4 @@ const emit = defineEmits<{
   height: 100%;
 }
 </style>
+

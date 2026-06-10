@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import type { SceneRecord } from '~/types/novel'
+import type { SceneRecord } from '~/features/novel/types/novel'
 
 defineProps<{
   scenes: SceneRecord[]
@@ -53,3 +53,4 @@ const emit = defineEmits<{
   box-shadow: 0 0 0 1px rgba(32, 128, 240, 0.18);
 }
 </style>
+

@@ -1,11 +1,12 @@
-import { computed, ref } from 'vue'
-import type { EventDraft } from '~/types/novel'
+﻿import { computed, ref } from 'vue'
+import { useNovelStore } from '~/features/novel/stores/novel'
+import type { EventDraft } from '~/features/novel/types/novel'
 import {
   appendEventDraft,
   normalizeEventDrafts,
   removeEventDraft,
   toEventDrafts,
-} from '~/utils/event-annotation'
+} from '~/features/event/utils/event-annotation'
 
 export function useEventAnnotation(novelId: string) {
   const novelStore = useNovelStore()

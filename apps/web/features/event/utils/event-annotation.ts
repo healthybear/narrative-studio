@@ -1,5 +1,5 @@
-import { nanoid } from 'nanoid'
-import type { EventDraft, EventRecord } from '~/types/novel'
+﻿import { nanoid } from 'nanoid'
+import type { EventDraft, EventRecord } from '~/features/novel/types/novel'
 
 function defaultEventTitle(order: number) {
   return `事件 ${order}`

@@ -4,7 +4,7 @@ import {
   createEmptyEventDraft,
   normalizeEventDrafts,
   removeEventDraft,
-} from '~/utils/event-annotation'
+} from '~/features/event/utils/event-annotation'
 
 describe('event annotation helpers', () => {
   it('creates a default draft for the target scene', () => {

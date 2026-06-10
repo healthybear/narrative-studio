@@ -2,7 +2,7 @@
 import { computed, onMounted } from 'vue'
 import { AddOutline, FlashOutline, SaveOutline } from '@vicons/ionicons5'
 import { useMessage } from 'naive-ui'
-import { useEventAnnotation } from '~/composables/useEventAnnotation'
+import { useEventAnnotation } from '~/features/event/composables/useEventAnnotation'
 
 const props = defineProps<{
   novelId: string
@@ -254,3 +254,4 @@ onMounted(() => {
   }
 }
 </style>
+

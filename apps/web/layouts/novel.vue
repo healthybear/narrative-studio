@@ -14,7 +14,7 @@ import {
   SunnyOutline,
 } from '@vicons/ionicons5'
 import { useAppTheme } from '~/composables/app/useAppTheme'
-import { useNovelStore } from '~/stores/novel'
+import { useNovelStore } from '~/features/novel/stores/novel'
 
 const route = useRoute()
 const router = useRouter()
@@ -199,3 +199,4 @@ onMounted(async () => {
   overflow-y: auto;
 }
 </style>
+

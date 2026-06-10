@@ -13,7 +13,7 @@ import {
 import { NIcon } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 import { useResponsive } from '~/composables/app/useResponsive'
-import { useNovelStore } from '~/stores/novel'
+import { useNovelStore } from '~/features/novel/stores/novel'
 import { useAppStore } from '~/stores/app'
 
 const route = useRoute()
@@ -182,3 +182,4 @@ function handleMenuSelect(key: string) {
   height: 100%;
 }
 </style>
+

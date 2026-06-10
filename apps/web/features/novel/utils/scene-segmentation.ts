@@ -1,5 +1,9 @@
-import { nanoid } from 'nanoid'
-import type { ChapterDraftInput, SceneDraftInput, SceneSuggestion } from '~/types/novel'
+﻿import { nanoid } from 'nanoid'
+import type {
+  ChapterDraftInput,
+  SceneDraftInput,
+  SceneSuggestion,
+} from '~/features/novel/types/novel'
 
 type ChapterSeed = Pick<
   ChapterDraftInput,
@@ -105,8 +109,8 @@ export function acceptSceneSuggestion(
 ) {
   const target = scenes.find(
     scene =>
-      suggestion.startOffset > scene.startOffset &&
-      suggestion.startOffset < scene.endOffset
+      suggestion.startOffset > scene.startOffset
+      && suggestion.startOffset < scene.endOffset
   )
 
   if (!target?.id) {

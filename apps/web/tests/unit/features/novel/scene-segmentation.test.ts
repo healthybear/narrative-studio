@@ -4,7 +4,7 @@ import {
   createInitialSceneDrafts,
   mergeSceneWithPrevious,
   splitSceneAtOffset,
-} from '~/utils/scene-segmentation'
+} from '~/features/novel/utils/scene-segmentation'
 
 describe('scene segmentation', () => {
   it('creates one default scene for each chapter', () => {

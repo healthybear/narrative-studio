@@ -23,7 +23,7 @@ import type {
   PerspectiveRecord,
   SceneDraftInput,
   SceneRecord,
-} from '~/types/novel'
+} from '~/features/novel/types/novel'
 
 const DB_NAME = 'narrative-studio'
 const DB_VERSION = 3
