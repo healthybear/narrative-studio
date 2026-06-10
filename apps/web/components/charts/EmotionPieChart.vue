@@ -3,23 +3,20 @@
 </template>
 
 <script setup lang="ts">
-/**
- * 情感分布饼图组件
- * 使用 ECharts 绘制情感类型分布
- */
-import * as echarts from 'echarts'
-import type { EChartsOption } from 'echarts'
+import type { ECharts, EChartsOption } from 'echarts'
 
 interface EmotionStat {
-  type: string // 情感类型
-  label: string // 显示标签
-  value: number // 数值
-  color: string // 颜色
+  type: string
+  label: string
+  value: number
+  color: string
 }
 
 type TooltipFormatterParams =
   | Array<{ percent?: number; name?: string; value?: unknown }>
   | { percent?: number; name?: string; value?: unknown }
+
+type EChartsModule = typeof import('echarts')
 
 interface Props {
   data: EmotionStat[]
@@ -33,12 +30,18 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const chartRef = ref<HTMLElement>()
-let chartInstance: echarts.ECharts | null = null
+let chartInstance: ECharts | null = null
+let echartsModule: EChartsModule | null = null
 
-// 初始化图表
-const initChart = () => {
+async function loadEcharts() {
+  echartsModule ??= await import('echarts')
+  return echartsModule
+}
+
+async function initChart() {
   if (!chartRef.value) return
 
+  const echarts = await loadEcharts()
   chartInstance = echarts.init(chartRef.value)
 
   const option: EChartsOption = {
@@ -105,10 +108,13 @@ const initChart = () => {
   }
 
   chartInstance.setOption(option)
+
+  if (props.loading) {
+    showLoading()
+  }
 }
 
-// 更新图表
-const updateChart = () => {
+function updateChart() {
   if (!chartInstance) return
 
   chartInstance.setOption({
@@ -126,33 +132,25 @@ const updateChart = () => {
   })
 }
 
-// 显示加载状态
-const showLoading = () => {
-  if (chartInstance) {
-    chartInstance.showLoading({
-      text: '加载中...',
-      color: '#18a058',
-      textColor: '#000',
-      maskColor: 'rgba(255, 255, 255, 0.8)',
-    })
-  }
+function showLoading() {
+  if (!chartInstance) return
+
+  chartInstance.showLoading({
+    text: '加载中...',
+    color: '#18a058',
+    textColor: '#000',
+    maskColor: 'rgba(255, 255, 255, 0.8)',
+  })
 }
 
-// 隐藏加载状态
-const hideLoading = () => {
-  if (chartInstance) {
-    chartInstance.hideLoading()
-  }
+function hideLoading() {
+  chartInstance?.hideLoading()
 }
 
-// 响应式调整
-const handleResize = () => {
-  if (chartInstance) {
-    chartInstance.resize()
-  }
+function handleResize() {
+  chartInstance?.resize()
 }
 
-// 监听数据变化
 watch(
   () => props.data,
   () => {
@@ -160,36 +158,32 @@ watch(
       updateChart()
     }
   },
-  { deep: true }
+  { deep: true },
 )
 
-// 监听加载状态
 watch(
   () => props.loading,
   (loading) => {
     if (loading) {
       showLoading()
-    } else {
+    }
+    else {
       hideLoading()
     }
-  }
+  },
 )
 
-// 生命周期
 onMounted(() => {
-  initChart()
+  void initChart()
   window.addEventListener('resize', handleResize)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
-  if (chartInstance) {
-    chartInstance.dispose()
-    chartInstance = null
-  }
+  chartInstance?.dispose()
+  chartInstance = null
 })
 
-// 暴露方法
 defineExpose({
   updateChart,
   showLoading,

@@ -2,6 +2,29 @@
 import Components from 'unplugin-vue-components/vite'
 import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 
+function createManualChunks(id: string) {
+  if (!id.includes('node_modules'))
+    return
+
+  if (
+    id.includes('naive-ui')
+    || id.includes('vueuc')
+    || id.includes('@css-render')
+    || id.includes('@juggle/resize-observer')
+  ) {
+    return 'naive-ui'
+  }
+
+  if (id.includes('echarts'))
+    return 'echarts'
+
+  if (id.includes('d3'))
+    return 'd3'
+
+  if (id.includes('@vue') || /[\\/]vue[\\/]/.test(id) || id.includes('pinia') || id.includes('@vueuse'))
+    return 'vue-core'
+}
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
 
@@ -34,6 +57,13 @@ export default defineNuxtConfig({
   vite: {
     optimizeDeps: {
       include: ['naive-ui', 'vueuc', 'date-fns-tz/formatInTimeZone', '@juggle/resize-observer'],
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: createManualChunks,
+        },
+      },
     },
     ssr: {
       noExternal: ['naive-ui', '@css-render/vue3-ssr', '@juggle/resize-observer'],
