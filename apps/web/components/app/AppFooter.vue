@@ -1,3 +1,23 @@
+﻿<script setup lang="ts">
+import { useMessage } from 'naive-ui'
+
+const currentYear = new Date().getFullYear()
+const version = '0.1.0'
+const message = useMessage()
+
+function openDocs() {
+  message.warning('文档中心暂未开放')
+}
+
+function openGithub() {
+  message.warning('GitHub 链接暂未配置')
+}
+
+function openFeedback() {
+  message.warning('反馈入口暂未开放')
+}
+</script>
+
 <template>
   <n-layout-footer bordered class="app-footer">
     <div class="footer-content">
@@ -17,26 +37,6 @@
     </div>
   </n-layout-footer>
 </template>
-
-<script setup lang="ts">
-import { useMessage } from 'naive-ui'
-
-const currentYear = new Date().getFullYear()
-const version = '0.1.0'
-const message = useMessage()
-
-function openDocs() {
-  message.warning('文档中心暂未开放')
-}
-
-function openGithub() {
-  message.warning('GitHub 链接暂未配置')
-}
-
-function openFeedback() {
-  message.warning('反馈入口暂未开放')
-}
-</script>
 
 <style scoped>
 .app-footer {

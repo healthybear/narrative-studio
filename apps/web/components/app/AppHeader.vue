@@ -1,3 +1,58 @@
+﻿<script setup lang="ts">
+import { computed } from 'vue'
+import { MenuOutline, MoonOutline, PersonCircleOutline, SunnyOutline } from '@vicons/ionicons5'
+import { useMessage, type DropdownOption } from 'naive-ui'
+import { useResponsive } from '~/composables/app/useResponsive'
+import { useAppTheme } from '~/composables/app/useAppTheme'
+import { useNovelStore } from '~/stores/novel'
+import { useAppStore } from '~/stores/app'
+
+const appStore = useAppStore()
+const novelStore = useNovelStore()
+const message = useMessage()
+const { isDark, toggleTheme } = useAppTheme()
+const { isMobile } = useResponsive()
+
+const currentNovel = computed(() => novelStore.currentNovel)
+
+const userMenuOptions: DropdownOption[] = [
+  {
+    label: '设置',
+    key: 'settings',
+  },
+  {
+    label: '帮助',
+    key: 'help',
+  },
+  {
+    type: 'divider',
+    key: 'divider-1',
+  },
+  {
+    label: '关于',
+    key: 'about',
+  },
+]
+
+function toggleDrawer() {
+  appStore.toggleDrawer()
+}
+
+function handleUserMenuSelect(key: string | number) {
+  switch (key) {
+    case 'settings':
+      message.warning('设置功能暂未开放')
+      break
+    case 'help':
+      message.warning('帮助中心暂未开放')
+      break
+    case 'about':
+      message.info('关于页面暂未开放')
+      break
+  }
+}
+</script>
+
 <template>
   <n-layout-header bordered class="app-header">
     <div class="header-content">
@@ -31,7 +86,7 @@
           <n-button
             text
             :title="isDark ? '切换到浅色模式' : '切换到深色模式'"
-            @click="toggleDark"
+            @click="toggleTheme"
           >
             <template #icon>
               <n-icon :size="20">
@@ -54,69 +109,6 @@
     </div>
   </n-layout-header>
 </template>
-
-<script setup lang="ts">
-import { MenuOutline, MoonOutline, PersonCircleOutline, SunnyOutline } from '@vicons/ionicons5'
-import { useMessage, type DropdownOption } from 'naive-ui'
-
-const drawerVisible = defineModel<boolean>('drawerVisible', { default: false })
-const { isDark, toggleDark } = useTheme()
-const novelStore = useNovelStore()
-const message = useMessage()
-
-const currentNovel = computed(() => novelStore.currentNovel)
-const isMobile = ref(false)
-
-const userMenuOptions: DropdownOption[] = [
-  {
-    label: '设置',
-    key: 'settings',
-  },
-  {
-    label: '帮助',
-    key: 'help',
-  },
-  {
-    type: 'divider',
-    key: 'divider-1',
-  },
-  {
-    label: '关于',
-    key: 'about',
-  },
-]
-
-function checkScreenSize() {
-  isMobile.value = window.innerWidth < 768
-}
-
-function toggleDrawer() {
-  drawerVisible.value = !drawerVisible.value
-}
-
-function handleUserMenuSelect(key: string | number) {
-  switch (key) {
-    case 'settings':
-      message.warning('设置功能暂未开放')
-      break
-    case 'help':
-      message.warning('帮助中心暂未开放')
-      break
-    case 'about':
-      message.info('关于页面暂未开放')
-      break
-  }
-}
-
-onMounted(() => {
-  checkScreenSize()
-  window.addEventListener('resize', checkScreenSize)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', checkScreenSize)
-})
-</script>
 
 <style scoped>
 .app-header {

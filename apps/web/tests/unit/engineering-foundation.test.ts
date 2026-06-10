@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+﻿import { existsSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -83,8 +83,8 @@ describe('engineering foundation', () => {
   })
 
   it('uses explicit Naive UI message imports in runtime entry points', () => {
-    const header = read(resolve(webRoot, 'components/layout/AppHeader.vue'))
-    const footer = read(resolve(webRoot, 'components/layout/AppFooter.vue'))
+    const header = read(resolve(webRoot, 'components/app/AppHeader.vue'))
+    const footer = read(resolve(webRoot, 'components/app/AppFooter.vue'))
     const novelsPage = read(resolve(webRoot, 'pages/novels/index.vue'))
 
     expect(header).toMatch(/import\s+\{[^}]*useMessage[^}]*\}\s+from 'naive-ui'/)
@@ -99,3 +99,4 @@ describe('engineering foundation', () => {
     expect(gitignore).toContain('components.d.ts')
   })
 })
+

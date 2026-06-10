@@ -1,49 +1,7 @@
-﻿<template>
-  <n-config-provider :theme="theme">
-    <n-message-provider>
-      <n-dialog-provider>
-        <n-notification-provider>
-          <div class="novel-layout">
-            <header class="layout-header">
-              <div class="header-content">
-                <h1 class="logo">
-                  <NuxtLink to="/novels">Narrative Studio</NuxtLink>
-                </h1>
-                <div v-if="currentNovel" class="novel-info">
-                  <n-icon :component="BookOutline" />
-                  <span class="novel-title">{{ currentNovel.title }}</span>
-                </div>
-                <div class="header-actions">
-                  <n-button text @click="toggleTheme">
-                    <n-icon :size="20" :component="theme ? SunnyOutline : MoonOutline" />
-                  </n-button>
-                </div>
-              </div>
-            </header>
-
-            <div class="layout-body">
-              <aside class="layout-sidebar">
-                <n-menu
-                  :value="activeKey"
-                  :options="menuOptions"
-                  @update:value="handleMenuSelect"
-                />
-              </aside>
-
-              <main class="layout-main">
-                <slot />
-              </main>
-            </div>
-          </div>
-        </n-notification-provider>
-      </n-dialog-provider>
-    </n-message-provider>
-  </n-config-provider>
-</template>
-
-<script setup lang="ts">
-import { darkTheme, NIcon } from 'naive-ui'
-import type { GlobalTheme, MenuOption } from 'naive-ui'
+﻿<script setup lang="ts">
+import { computed, h, onMounted } from 'vue'
+import { NIcon } from 'naive-ui'
+import type { MenuOption } from 'naive-ui'
 import {
   BarChartOutline,
   BookOutline,
@@ -55,13 +13,14 @@ import {
   PulseOutline,
   SunnyOutline,
 } from '@vicons/ionicons5'
+import { useAppTheme } from '~/composables/app/useAppTheme'
 import { useNovelStore } from '~/stores/novel'
 
 const route = useRoute()
 const router = useRouter()
 const novelStore = useNovelStore()
+const { isDark, toggleTheme } = useAppTheme()
 
-const theme = ref<GlobalTheme | null>(null)
 const novelId = computed(() => route.params.id as string)
 const currentNovel = computed(() => novelStore.currentNovel)
 
@@ -111,10 +70,6 @@ const menuOptions = computed<MenuOption[]>(() => [
   },
 ])
 
-function toggleTheme() {
-  theme.value = theme.value ? null : darkTheme
-}
-
 function handleMenuSelect(key: string) {
   void router.push(`/novel/${novelId.value}/${key}`)
 }
@@ -125,6 +80,41 @@ onMounted(async () => {
   }
 })
 </script>
+
+<template>
+  <div class="novel-layout">
+    <header class="layout-header">
+      <div class="header-content">
+        <h1 class="logo">
+          <NuxtLink to="/novels">Narrative Studio</NuxtLink>
+        </h1>
+        <div v-if="currentNovel" class="novel-info">
+          <n-icon :component="BookOutline" />
+          <span class="novel-title">{{ currentNovel.title }}</span>
+        </div>
+        <div class="header-actions">
+          <n-button text @click="toggleTheme">
+            <n-icon :size="20" :component="isDark ? SunnyOutline : MoonOutline" />
+          </n-button>
+        </div>
+      </div>
+    </header>
+
+    <div class="layout-body">
+      <aside class="layout-sidebar">
+        <n-menu
+          :value="activeKey"
+          :options="menuOptions"
+          @update:value="handleMenuSelect"
+        />
+      </aside>
+
+      <main class="layout-main">
+        <slot />
+      </main>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .novel-layout {

@@ -1,46 +1,5 @@
-﻿<template>
-  <n-layout-sider
-    v-if="!isMobile"
-    class="app-sidebar"
-    bordered
-    collapse-mode="width"
-    :collapsed-width="64"
-    :width="240"
-    :collapsed="collapsed"
-    show-trigger
-    @collapse="collapsed = true"
-    @expand="collapsed = false"
-  >
-    <n-scrollbar style="height: 100%">
-      <n-menu
-        :collapsed="collapsed"
-        :collapsed-width="64"
-        :collapsed-icon-size="22"
-        :options="menuOptions"
-        :value="activeKey"
-        @update:value="handleMenuSelect"
-      />
-    </n-scrollbar>
-  </n-layout-sider>
-
-  <n-drawer
-    v-else
-    v-model:show="drawerVisible"
-    :width="240"
-    placement="left"
-  >
-    <n-drawer-content title="导航菜单" :native-scrollbar="false">
-      <n-menu
-        :options="menuOptions"
-        :value="activeKey"
-        @update:value="handleMenuSelect"
-      />
-    </n-drawer-content>
-  </n-drawer>
-</template>
-
-<script setup lang="ts">
-import { h, type Component } from 'vue'
+﻿<script setup lang="ts">
+import { computed, h, type Component } from 'vue'
 import {
   BarChartOutline,
   EyeOutline,
@@ -53,14 +12,15 @@ import {
 } from '@vicons/ionicons5'
 import { NIcon } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
+import { useResponsive } from '~/composables/app/useResponsive'
+import { useNovelStore } from '~/stores/novel'
+import { useAppStore } from '~/stores/app'
 
 const route = useRoute()
 const router = useRouter()
+const appStore = useAppStore()
 const novelStore = useNovelStore()
-
-const collapsed = ref(false)
-const drawerVisible = defineModel<boolean>('drawerVisible', { default: false })
-const isMobile = ref(false)
+const { isMobile } = useResponsive()
 
 const currentNovel = computed(() => novelStore.currentNovel)
 
@@ -140,15 +100,11 @@ const menuOptions = computed<MenuOption[]>(() => [
   },
 ])
 
-function checkScreenSize() {
-  isMobile.value = window.innerWidth < 768
-}
-
 function handleMenuSelect(key: string) {
   const currentNovelId = currentNovel.value?.id
 
   if (isMobile.value) {
-    drawerVisible.value = false
+    appStore.setDrawerVisible(false)
   }
 
   switch (key) {
@@ -178,16 +134,48 @@ function handleMenuSelect(key: string) {
       break
   }
 }
-
-onMounted(() => {
-  checkScreenSize()
-  window.addEventListener('resize', checkScreenSize)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', checkScreenSize)
-})
 </script>
+
+<template>
+  <n-layout-sider
+    v-if="!isMobile"
+    class="app-sidebar"
+    bordered
+    collapse-mode="width"
+    :collapsed-width="64"
+    :width="240"
+    :collapsed="appStore.sidebarCollapsed"
+    show-trigger
+    @collapse="appStore.setSidebarCollapsed(true)"
+    @expand="appStore.setSidebarCollapsed(false)"
+  >
+    <n-scrollbar style="height: 100%">
+      <n-menu
+        :collapsed="appStore.sidebarCollapsed"
+        :collapsed-width="64"
+        :collapsed-icon-size="22"
+        :options="menuOptions"
+        :value="activeKey"
+        @update:value="handleMenuSelect"
+      />
+    </n-scrollbar>
+  </n-layout-sider>
+
+  <n-drawer
+    v-else
+    v-model:show="appStore.drawerVisible"
+    :width="240"
+    placement="left"
+  >
+    <n-drawer-content title="导航菜单" :native-scrollbar="false">
+      <n-menu
+        :options="menuOptions"
+        :value="activeKey"
+        @update:value="handleMenuSelect"
+      />
+    </n-drawer-content>
+  </n-drawer>
+</template>
 
 <style scoped>
 .app-sidebar {
