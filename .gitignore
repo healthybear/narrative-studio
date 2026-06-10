@@ -220,3 +220,5 @@ docs/.vitepress/dist
 
 # Codex
 .codex/
+
+.worktrees/
