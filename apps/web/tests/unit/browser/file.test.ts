@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { exportAsCsv } from '~/utils/file'
+import { exportAsCsv } from '~/utils/browser/file'
 
 describe('file utilities', () => {
   afterEach(() => {
@@ -41,7 +41,20 @@ describe('file utilities', () => {
       throw new Error('exportAsCsv 应该生成 Blob 下载内容')
     }
 
-    const bytes = new Uint8Array(await capturedBlob.arrayBuffer())
+    const exportedBlob = capturedBlob
+
+    const bytes = await new Promise<Uint8Array>((resolve, reject) => {
+      const reader = new FileReader()
+
+      reader.onload = () => {
+        resolve(new Uint8Array(reader.result as ArrayBuffer))
+      }
+      reader.onerror = () => {
+        reject(reader.error ?? new Error('Failed to read exported CSV blob'))
+      }
+
+      reader.readAsArrayBuffer(exportedBlob)
+    })
     expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf])
     expect(new TextDecoder().decode(bytes.slice(3))).toBe('title,count\nAlpha,2')
   })

@@ -2,7 +2,7 @@
 import { onMounted } from 'vue'
 import { naiveThemeOverrides } from '~/assets/styles/themes/naive'
 import { useAppTheme } from '~/composables/app/useAppTheme'
-import { initDB } from '~/utils/db'
+import { initDB } from '~/utils/browser/db'
 import {
   NConfigProvider,
   NDialogProvider,

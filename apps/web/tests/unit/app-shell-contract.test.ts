@@ -18,7 +18,7 @@ describe('app shell contract', () => {
     expect(appEntry).not.toContain('<NConfigProvider')
     expect(appEntry).not.toContain('<NMessageProvider')
     expect(appEntry).not.toContain('initDB(')
-    expect(appEntry).not.toContain("~/utils/db")
+    expect(appEntry).not.toContain("~/utils/browser/db")
     expect(appEntry).not.toContain('onMounted(')
   })
 
@@ -54,7 +54,7 @@ describe('app shell contract', () => {
     expect(providers).toContain("from '~/assets/styles/themes/naive'")
     expect(providers).toContain(':theme-overrides="naiveThemeOverrides"')
     expect(providers).toContain('initDB(')
-    expect(providers).toContain("~/utils/db")
+    expect(providers).toContain("~/utils/browser/db")
     expect(providers).toContain('onMounted(')
   })
 

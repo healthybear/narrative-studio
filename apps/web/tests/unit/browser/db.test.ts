@@ -15,7 +15,7 @@ import {
   saveSceneEvents,
   saveScenes,
   updateNovelProject,
-} from '~/utils/db'
+} from '~/utils/browser/db'
 
 describe('database schema and project crud', () => {
   beforeEach(async () => {

@@ -98,8 +98,8 @@ import {
   CloseOutline,
   DocumentTextOutline,
 } from '@vicons/ionicons5'
-import { countWords, formatFileSize } from '~/utils/format'
-import { detectFileType, readTextFile, readWordFile, validateFileSize } from '~/utils/file'
+import { detectFileType, readTextFile, readWordFile, validateFileSize } from '~/utils/browser/file'
+import { countWords, formatFileSize } from '~/utils/shared/format'
 
 const emit = defineEmits<{
   (e: 'update:file', file: File | null): void

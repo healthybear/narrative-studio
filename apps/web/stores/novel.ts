@@ -21,7 +21,7 @@ import {
   saveSceneEvents as persistSceneEvents,
   saveScenes,
   updateNovelProject,
-} from '~/utils/db'
+} from '~/utils/browser/db'
 
 interface CreateNovelInput {
   title: string
