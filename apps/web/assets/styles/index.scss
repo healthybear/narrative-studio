@@ -1,0 +1,22 @@
+@use './tokens.scss';
+@use './reset.scss';
+@use './utilities.scss';
+
+html,
+body,
+#__nuxt {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(100, 138, 107, 0.22), transparent 38%),
+    linear-gradient(180deg, var(--color-paper-strong) 0%, var(--color-paper) 55%, #efe5d6 100%);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+a {
+  color: inherit;
+}

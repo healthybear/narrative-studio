@@ -1,9 +1,9 @@
-<template>
+﻿<template>
   <n-layout has-sider class="app-layout">
-    <AppSidebar v-model:drawer-visible="drawerVisible" />
+    <AppSidebar />
 
     <n-layout>
-      <AppHeader v-model:drawer-visible="drawerVisible" />
+      <AppHeader />
 
       <n-layout-content class="app-content">
         <n-scrollbar style="height: 100%">
@@ -17,10 +17,6 @@
     </n-layout>
   </n-layout>
 </template>
-
-<script setup lang="ts">
-const drawerVisible = ref(false)
-</script>
 
 <style scoped>
 .app-layout {
