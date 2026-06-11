@@ -260,8 +260,10 @@ export const useNovelProjectStore = defineStore('novel-project', {
         const index = this.projects.findIndex(p => p.id === id)
         if (index !== -1) {
           const [project] = this.projects.splice(index, 1)
-          project.deletedAt = new Date().toISOString()
-          this.trashedProjects.push(project)
+          if (project) {
+            project.deletedAt = new Date().toISOString()
+            this.trashedProjects.push(project)
+          }
         }
       }
       catch (error) {
@@ -286,8 +288,10 @@ export const useNovelProjectStore = defineStore('novel-project', {
         const index = this.trashedProjects.findIndex(p => p.id === id)
         if (index !== -1) {
           const [project] = this.trashedProjects.splice(index, 1)
-          project.deletedAt = null
-          this.projects.push(project)
+          if (project) {
+            project.deletedAt = null
+            this.projects.push(project)
+          }
         }
       }
       catch (error) {
@@ -359,8 +363,8 @@ export const useNovelProjectStore = defineStore('novel-project', {
         await updateNovelProjectMeta(novelId, { lastOpenedAt: now })
 
         const projectIndex = this.projects.findIndex(p => p.id === novelId)
-        if (projectIndex !== -1) {
-          this.projects[projectIndex].lastOpenedAt = now
+        if (projectIndex !== -1 && this.projects[projectIndex]) {
+          this.projects[projectIndex]!.lastOpenedAt = now
         }
       }
       catch (error) {

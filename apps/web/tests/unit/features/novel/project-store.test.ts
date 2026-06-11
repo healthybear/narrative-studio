@@ -22,10 +22,14 @@ describe('novel project store', () => {
       targetWordCount: null,
     })
 
-    const id = store.projects[0].id
-    await store.moveToTrash(id)
+    const id = store.projects[0]?.id
+    expect(id).toBeDefined()
 
-    expect(store.projects).toHaveLength(0)
-    expect(store.trashedProjects).toHaveLength(1)
+    if (id) {
+      await store.moveToTrash(id)
+
+      expect(store.projects).toHaveLength(0)
+      expect(store.trashedProjects).toHaveLength(1)
+    }
   })
 })

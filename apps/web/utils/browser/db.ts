@@ -324,6 +324,17 @@ function createNovelRecord(input: {
     status: 'draft',
     sourceFileName: input.sourceFileName,
     sourceFileType: input.sourceFileType,
+    // NovelProjectMeta 字段
+    summary: '',
+    logline: '',
+    genre: '',
+    perspective: '',
+    era: '',
+    tags: [],
+    targetWordCount: null,
+    currentWordCount: countWords(input.rawText),
+    lastOpenedAt: null,
+    deletedAt: null,
   }
 }
 
@@ -750,22 +761,28 @@ export async function exportNovelProject(id: string) {
  * 用于兼容旧数据
  */
 function normalizeNovelProjectMeta(project: NovelProject): NovelProjectMeta {
+  // 将旧的 NovelStatus 映射到新的 NovelProjectStatus
+  let status: NovelProjectMeta['status'] = 'active'
+  if (project.status === 'draft') {
+    status = 'draft'
+  }
+
   return {
     id: project.id,
     title: project.title,
-    summary: '',
-    logline: '',
-    genre: '',
-    perspective: '',
-    era: '',
-    status: project.status === 'completed' ? 'archived' : 'active',
-    tags: [],
-    targetWordCount: null,
-    currentWordCount: project.wordCount,
+    summary: project.summary || '',
+    logline: project.logline || '',
+    genre: project.genre || '',
+    perspective: project.perspective || '',
+    era: project.era || '',
+    status,
+    tags: project.tags || [],
+    targetWordCount: project.targetWordCount || null,
+    currentWordCount: project.currentWordCount || project.wordCount,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
-    lastOpenedAt: null,
-    deletedAt: null,
+    lastOpenedAt: project.lastOpenedAt || null,
+    deletedAt: project.deletedAt || null,
   }
 }
 
