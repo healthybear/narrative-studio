@@ -1,15 +1,71 @@
 export type NovelStatus = 'draft' | 'analyzing' | 'completed'
 
-export interface NovelProject {
+/**
+ * 小说项目状态
+ * - draft: 草稿
+ * - active: 进行中
+ * - archived: 已归档
+ */
+export type NovelProjectStatus = 'draft' | 'active' | 'archived'
+
+/**
+ * 小说项目元数据
+ * 用于项目管理层，不包含内容数据
+ */
+export interface NovelProjectMeta {
   id: string
   title: string
+  summary: string
+  logline: string
+  genre: string
+  perspective: string
+  era: string
+  status: NovelProjectStatus
+  tags: string[]
+  targetWordCount: number | null
+  currentWordCount: number
+  createdAt: string
+  updatedAt: string
+  lastOpenedAt: string | null
+  deletedAt: string | null
+}
+
+/**
+ * 小说项目统计摘要
+ * 用于项目总览页展示
+ */
+export interface NovelProjectStats {
+  novelId: string
+  chapterCount: number
+  eventCount: number
+  characterCount: number
+  pendingEventCount: number
+  lastActiveModule: 'overview' | 'content' | 'structure' | 'events' | 'characters' | 'perspective' | 'analysis' | null
+  lastActivityText: string
+  updatedAt: string
+}
+
+/**
+ * 小说项目活动记录
+ * 用于项目活动时间线展示
+ */
+export interface NovelProjectActivity {
+  id: string
+  novelId: string
+  type: 'project_created' | 'project_updated' | 'module_entered' | 'text_imported' | 'chapters_saved' | 'events_saved' | 'project_archived' | 'project_restored' | 'project_deleted'
+  text: string
+  createdAt: string
+}
+
+/**
+ * 小说项目完整数据
+ * 继承元数据，增加内容相关字段
+ */
+export interface NovelProject extends NovelProjectMeta {
   author?: string
   rawText: string
   wordCount: number
   chapterCount: number
-  createdAt: string
-  updatedAt: string
-  status: NovelStatus
   sourceFileName?: string
   sourceFileType?: 'txt' | 'docx'
   lastError?: string
