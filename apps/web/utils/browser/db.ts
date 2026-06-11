@@ -760,7 +760,7 @@ export async function exportNovelProject(id: string) {
  * 将旧的 NovelProject 数据规范化为 NovelProjectMeta
  * 用于兼容旧数据
  */
-function normalizeNovelProjectMeta(project: NovelProject): NovelProjectMeta {
+function _normalizeNovelProjectMeta(project: NovelProject): NovelProjectMeta {
   // 将旧的 NovelStatus 映射到新的 NovelProjectStatus
   let status: NovelProjectMeta['status'] = 'active'
   if (project.status === 'draft') {

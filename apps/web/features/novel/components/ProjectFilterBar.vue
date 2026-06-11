@@ -3,7 +3,7 @@
  * 项目筛选条组件
  * 提供搜索、状态筛选和新建入口
  */
-const props = defineProps<{
+defineProps<{
   searchQuery: string
   statusFilter: 'all' | 'draft' | 'active' | 'archived' | 'trash'
 }>()

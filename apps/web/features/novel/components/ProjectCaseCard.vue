@@ -5,7 +5,7 @@ import type { NovelProjectMeta, NovelProjectStats } from '~/features/novel/types
  * 项目卡片组件 - 卷宗风格
  * 用于在项目列表页展示单个项目
  */
-const props = defineProps<{
+defineProps<{
   project: NovelProjectMeta
   stats?: NovelProjectStats
 }>()

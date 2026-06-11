@@ -37,7 +37,7 @@ onMounted(async () => {
     await projectStore.loadProjectActivities(projectId.value)
     await projectStore.markModuleEntered(projectId.value, 'overview')
   }
-  catch (error) {
+  catch {
     message.error('加载项目失败')
   }
   finally {
@@ -74,7 +74,7 @@ async function handleFormSubmit(data: FormData) {
     })
     message.success('项目更新成功')
   }
-  catch (error) {
+  catch {
     message.error('更新项目失败')
   }
 }

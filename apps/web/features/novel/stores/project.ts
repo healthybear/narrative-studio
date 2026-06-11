@@ -318,8 +318,13 @@ export const useNovelProjectStore = defineStore('novel-project', {
           this.trashedProjects.splice(trashedIndex, 1)
         }
 
-        delete this.statsById[id]
-        delete this.activityById[id]
+        // 删除统计和活动数据
+        this.statsById = Object.fromEntries(
+          Object.entries(this.statsById).filter(([key]) => key !== id)
+        )
+        this.activityById = Object.fromEntries(
+          Object.entries(this.activityById).filter(([key]) => key !== id)
+        )
       }
       catch (error) {
         this.lastError = error instanceof Error ? error.message : '彻底删除失败'

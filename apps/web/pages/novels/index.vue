@@ -22,7 +22,7 @@ onMounted(async () => {
   try {
     await projectStore.loadProjects()
   }
-  catch (error) {
+  catch {
     message.error('加载项目列表失败')
   }
 })
@@ -93,7 +93,7 @@ async function handleFormSubmit(data: FormData) {
       void router.push(`/novels/${project.id}`)
     }
   }
-  catch (error) {
+  catch {
     message.error(editingProject.value ? '更新项目失败' : '创建项目失败')
   }
 }
@@ -115,7 +115,7 @@ async function handleArchive(id: string) {
       message.success('已归档项目')
     }
   }
-  catch (error) {
+  catch {
     message.error('操作失败')
   }
 }
@@ -128,7 +128,7 @@ async function handleTrash(id: string) {
     await projectStore.moveToTrash(id)
     message.success('已移入回收站')
   }
-  catch (error) {
+  catch {
     message.error('移入回收站失败')
   }
 }

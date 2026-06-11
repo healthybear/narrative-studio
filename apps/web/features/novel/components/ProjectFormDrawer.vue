@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
-import { reactive, ref, watch } from 'vue'
+import { reactive, ref, toRefs, watch } from 'vue'
 import type { NovelProjectMeta } from '~/features/novel/types/novel'
 
 /**
  * 项目表单抽屉组件
  * 用于创建和编辑项目
  */
-const props = defineProps<{
+const { show, project } = toRefs(defineProps<{
   show: boolean
   project?: NovelProjectMeta | null
-}>()
+}>())
 
 const emit = defineEmits<{
   'update:show': [value: boolean]
@@ -71,17 +71,17 @@ const rules: FormRules = {
  * 监听项目变化，同步表单数据
  */
 watch(
-  () => props.project,
-  (project) => {
-    if (project) {
-      formValue.title = project.title
-      formValue.summary = project.summary
-      formValue.logline = project.logline
-      formValue.genre = project.genre
-      formValue.perspective = project.perspective
-      formValue.era = project.era
-      formValue.tagsText = project.tags.join(', ')
-      formValue.targetWordCount = project.targetWordCount
+  project,
+  (proj) => {
+    if (proj) {
+      formValue.title = proj.title
+      formValue.summary = proj.summary
+      formValue.logline = proj.logline
+      formValue.genre = proj.genre
+      formValue.perspective = proj.perspective
+      formValue.era = proj.era
+      formValue.tagsText = proj.tags.join(', ')
+      formValue.targetWordCount = proj.targetWordCount
     }
   },
   { immediate: true }
@@ -91,9 +91,9 @@ watch(
  * 监听显示状态，重置表单
  */
 watch(
-  () => props.show,
-  (show) => {
-    if (!show) {
+  show,
+  (isShow) => {
+    if (!isShow) {
       resetForm()
     }
   }
@@ -103,7 +103,7 @@ watch(
  * 重置表单
  */
 const resetForm = () => {
-  if (!props.project) {
+  if (!project.value) {
     formValue.title = ''
     formValue.summary = ''
     formValue.logline = ''
