@@ -26,9 +26,12 @@ describe('database schema and project crud', () => {
     const db = await getDB()
     const storeNames = Array.from(db.objectStoreNames)
 
-    expect(storeNames).toHaveLength(11)
+    expect(storeNames).toHaveLength(14)
     expect(storeNames).toEqual(expect.arrayContaining([
       'novels',
+      'novel_projects',
+      'novel_project_stats',
+      'novel_project_activity',
       'chapters',
       'scenes',
       'characters',
@@ -41,9 +44,12 @@ describe('database schema and project crud', () => {
       'metadata',
     ]))
 
-    const tx = db.transaction(['novels', 'chapters', 'materials', 'scenes'], 'readonly')
+    const tx = db.transaction(['novels', 'chapters', 'materials', 'scenes', 'novel_projects'], 'readonly')
     expect(Array.from(tx.objectStore('novels').indexNames)).toEqual(
       expect.arrayContaining(['title', 'createdAt', 'updatedAt'])
+    )
+    expect(Array.from(tx.objectStore('novel_projects').indexNames)).toEqual(
+      expect.arrayContaining(['title', 'status', 'updatedAt', 'deletedAt', 'lastOpenedAt'])
     )
     expect(Array.from(tx.objectStore('chapters').indexNames)).toEqual(
       expect.arrayContaining(['novelId', 'order', 'novelId_order'])
@@ -284,5 +290,38 @@ describe('database schema and project crud', () => {
     await getDB()
     closeDB()
     await expect(resetDB()).resolves.toBeUndefined()
+  })
+
+  it('creates, soft deletes, restores, and hard deletes project metadata', async () => {
+    const { createNovelProjectMeta, listNovelProjectMetas, listTrashedNovelProjectMetas, moveNovelProjectToTrash, restoreNovelProject, permanentlyDeleteNovelProject, getNovelProjectMeta } = await import('~/utils/browser/db')
+
+    const project = await createNovelProjectMeta({
+      title: '北城雨夜',
+      summary: '',
+      logline: '',
+      genre: '',
+      perspective: '',
+      era: '',
+      tags: [],
+      targetWordCount: null,
+    })
+
+    expect(project.id).toBeTruthy()
+    expect(project.title).toBe('北城雨夜')
+    expect(project.status).toBe('active')
+    expect(project.deletedAt).toBeNull()
+
+    // 软删除到回收站
+    await moveNovelProjectToTrash(project.id)
+    expect((await listNovelProjectMetas()).map(item => item.id)).not.toContain(project.id)
+    expect((await listTrashedNovelProjectMetas()).map(item => item.id)).toContain(project.id)
+
+    // 从回收站恢复
+    await restoreNovelProject(project.id)
+    expect((await listNovelProjectMetas()).map(item => item.id)).toContain(project.id)
+
+    // 彻底删除
+    await permanentlyDeleteNovelProject(project.id)
+    await expect(getNovelProjectMeta(project.id)).rejects.toThrow()
   })
 })

@@ -18,7 +18,10 @@ import type {
   MaterialRecord,
   MetadataRecord,
   NovelProject,
+  NovelProjectActivity,
   NovelProjectBundle,
+  NovelProjectMeta,
+  NovelProjectStats,
   PatternRecord,
   PerspectiveRecord,
   SceneDraftInput,
@@ -26,7 +29,7 @@ import type {
 } from '~/features/novel/types/novel'
 
 const DB_NAME = 'narrative-studio'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 interface NarrativeStudioDB extends DBSchema {
   novels: {
@@ -36,6 +39,34 @@ interface NarrativeStudioDB extends DBSchema {
       title: string
       createdAt: string
       updatedAt: string
+    }
+  }
+  novel_projects: {
+    key: string
+    value: NovelProjectMeta
+    indexes: {
+      title: string
+      status: string
+      updatedAt: string
+      deletedAt: string
+      lastOpenedAt: string
+    }
+  }
+  novel_project_stats: {
+    key: string
+    value: NovelProjectStats
+    indexes: {
+      updatedAt: string
+      lastActiveModule: string
+    }
+  }
+  novel_project_activity: {
+    key: string
+    value: NovelProjectActivity
+    indexes: {
+      novelId: string
+      novelId_createdAt: [string, string]
+      createdAt: string
     }
   }
   chapters: {
@@ -185,6 +216,25 @@ function ensureSchema(db: IDBPDatabase<NarrativeStudioDB>, transaction: UpgradeT
   ensureIndex(novels, 'title', 'title')
   ensureIndex(novels, 'createdAt', 'createdAt')
   ensureIndex(novels, 'updatedAt', 'updatedAt')
+
+  // 项目元数据存储
+  const novelProjects = getOrCreateStore(db, transaction, 'novel_projects', { keyPath: 'id' })
+  ensureIndex(novelProjects, 'title', 'title')
+  ensureIndex(novelProjects, 'status', 'status')
+  ensureIndex(novelProjects, 'updatedAt', 'updatedAt')
+  ensureIndex(novelProjects, 'deletedAt', 'deletedAt')
+  ensureIndex(novelProjects, 'lastOpenedAt', 'lastOpenedAt')
+
+  // 项目统计摘要存储
+  const novelProjectStats = getOrCreateStore(db, transaction, 'novel_project_stats', { keyPath: 'novelId' })
+  ensureIndex(novelProjectStats, 'updatedAt', 'updatedAt')
+  ensureIndex(novelProjectStats, 'lastActiveModule', 'lastActiveModule')
+
+  // 项目活动记录存储
+  const novelProjectActivity = getOrCreateStore(db, transaction, 'novel_project_activity', { keyPath: 'id' })
+  ensureIndex(novelProjectActivity, 'novelId', 'novelId')
+  ensureIndex(novelProjectActivity, 'novelId_createdAt', ['novelId', 'createdAt'])
+  ensureIndex(novelProjectActivity, 'createdAt', 'createdAt')
 
   const chapters = getOrCreateStore(db, transaction, 'chapters', { keyPath: 'id' })
   ensureIndex(chapters, 'novelId', 'novelId')
@@ -497,6 +547,24 @@ export async function saveChapters(novelId: string, chapters: ChapterDraftInput[
   })
 
   await tx.done
+
+  // 更新项目统计数据
+  const currentStats = await getNovelProjectStats(novelId)
+  if (currentStats) {
+    await upsertNovelProjectStats({
+      ...currentStats,
+      chapterCount: records.length,
+      updatedAt: now,
+    })
+  }
+
+  // 记录活动
+  await recordNovelProjectActivity({
+    novelId,
+    type: 'chapters_saved',
+    text: `保存了 ${records.length} 个章节`,
+  })
+
   return records
 }
 
@@ -676,6 +744,297 @@ export async function getNovelProjectBundle(id: string): Promise<NovelProjectBun
 export async function exportNovelProject(id: string) {
   return getNovelProjectBundle(id)
 }
+
+/**
+ * 将旧的 NovelProject 数据规范化为 NovelProjectMeta
+ * 用于兼容旧数据
+ */
+function normalizeNovelProjectMeta(project: NovelProject): NovelProjectMeta {
+  return {
+    id: project.id,
+    title: project.title,
+    summary: '',
+    logline: '',
+    genre: '',
+    perspective: '',
+    era: '',
+    status: project.status === 'completed' ? 'archived' : 'active',
+    tags: [],
+    targetWordCount: null,
+    currentWordCount: project.wordCount,
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+    lastOpenedAt: null,
+    deletedAt: null,
+  }
+}
+
+/**
+ * 创建新的项目元数据
+ */
+export async function createNovelProjectMeta(input: {
+  title: string
+  summary: string
+  logline: string
+  genre: string
+  perspective: string
+  era: string
+  tags: string[]
+  targetWordCount: number | null
+}): Promise<NovelProjectMeta> {
+  const db = await getDB()
+  const now = new Date().toISOString()
+
+  const meta: NovelProjectMeta = {
+    id: nanoid(),
+    title: input.title.trim(),
+    summary: input.summary.trim(),
+    logline: input.logline.trim(),
+    genre: input.genre.trim(),
+    perspective: input.perspective.trim(),
+    era: input.era.trim(),
+    status: 'active',
+    tags: input.tags,
+    targetWordCount: input.targetWordCount,
+    currentWordCount: 0,
+    createdAt: now,
+    updatedAt: now,
+    lastOpenedAt: now,
+    deletedAt: null,
+  }
+
+  // 保存元数据
+  await db.put('novel_projects', meta)
+
+  // 初始化统计数据
+  const stats: NovelProjectStats = {
+    novelId: meta.id,
+    chapterCount: 0,
+    eventCount: 0,
+    characterCount: 0,
+    pendingEventCount: 0,
+    lastActiveModule: 'overview',
+    lastActivityText: '创建项目',
+    updatedAt: now,
+  }
+  await db.put('novel_project_stats', stats)
+
+  // 记录活动
+  await recordNovelProjectActivity({
+    novelId: meta.id,
+    type: 'project_created',
+    text: `创建项目「${meta.title}」`,
+  })
+
+  return meta
+}
+
+/**
+ * 获取单个项目元数据
+ */
+export async function getNovelProjectMeta(id: string): Promise<NovelProjectMeta> {
+  const db = await getDB()
+  const meta = await db.get('novel_projects', id)
+
+  if (!meta) {
+    throw new Error('未找到项目')
+  }
+
+  return meta
+}
+
+/**
+ * 列出所有正常项目（未删除）
+ */
+export async function listNovelProjectMetas(): Promise<NovelProjectMeta[]> {
+  const db = await getDB()
+  const all = await db.getAll('novel_projects')
+  return all.filter(item => item.deletedAt === null)
+}
+
+/**
+ * 列出回收站中的项目
+ */
+export async function listTrashedNovelProjectMetas(): Promise<NovelProjectMeta[]> {
+  const db = await getDB()
+  const all = await db.getAll('novel_projects')
+  return all.filter(item => item.deletedAt !== null)
+}
+
+/**
+ * 更新项目元数据
+ */
+export async function updateNovelProjectMeta(
+  id: string,
+  updates: Partial<Omit<NovelProjectMeta, 'id' | 'createdAt' | 'updatedAt'>>
+): Promise<NovelProjectMeta> {
+  const db = await getDB()
+  const current = await getNovelProjectMeta(id)
+
+  const updated: NovelProjectMeta = {
+    ...current,
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  }
+
+  await db.put('novel_projects', updated)
+
+  // 记录活动
+  await recordNovelProjectActivity({
+    novelId: id,
+    type: 'project_updated',
+    text: `更新项目信息`,
+  })
+
+  return updated
+}
+
+/**
+ * 移动项目到回收站（软删除）
+ */
+export async function moveNovelProjectToTrash(id: string): Promise<void> {
+  const db = await getDB()
+  const meta = await getNovelProjectMeta(id)
+
+  meta.deletedAt = new Date().toISOString()
+  await db.put('novel_projects', meta)
+
+  // 记录活动
+  await recordNovelProjectActivity({
+    novelId: id,
+    type: 'project_deleted',
+    text: `移入回收站`,
+  })
+}
+
+/**
+ * 从回收站恢复项目
+ */
+export async function restoreNovelProject(id: string): Promise<void> {
+  const db = await getDB()
+  const meta = await getNovelProjectMeta(id)
+
+  meta.deletedAt = null
+  meta.updatedAt = new Date().toISOString()
+  await db.put('novel_projects', meta)
+
+  // 记录活动
+  await recordNovelProjectActivity({
+    novelId: id,
+    type: 'project_restored',
+    text: `从回收站恢复`,
+  })
+}
+
+/**
+ * 彻底删除项目及其所有关联数据
+ */
+export async function permanentlyDeleteNovelProject(id: string): Promise<void> {
+  const db = await getDB()
+
+  // 删除项目元数据
+  await db.delete('novel_projects', id)
+
+  // 删除统计数据
+  await db.delete('novel_project_stats', id)
+
+  // 删除活动记录
+  const activities = await db.getAllFromIndex('novel_project_activity', 'novelId', id)
+  for (const activity of activities) {
+    await db.delete('novel_project_activity', activity.id)
+  }
+
+  // 删除章节
+  const chapters = await db.getAllFromIndex('chapters', 'novelId', id)
+  for (const chapter of chapters) {
+    await db.delete('chapters', chapter.id)
+  }
+
+  // 删除场景
+  const scenes = await db.getAllFromIndex('scenes', 'novelId', id)
+  for (const scene of scenes) {
+    await db.delete('scenes', scene.id)
+  }
+
+  // 删除事件
+  const events = await db.getAllFromIndex('events', 'novelId', id)
+  for (const event of events) {
+    await db.delete('events', event.id)
+  }
+
+  // 删除角色
+  const characters = await db.getAllFromIndex('characters', 'novelId', id)
+  for (const character of characters) {
+    await db.delete('characters', character.id)
+  }
+
+  // 删除角色关系
+  const relations = await db.getAllFromIndex('character_relations', 'novelId', id)
+  for (const relation of relations) {
+    await db.delete('character_relations', relation.id)
+  }
+
+  // 删除情感记录
+  const emotions = await db.getAllFromIndex('emotions', 'novelId', id)
+  for (const emotion of emotions) {
+    await db.delete('emotions', emotion.id)
+  }
+
+  // 删除视角记录
+  const perspectives = await db.getAllFromIndex('perspectives', 'novelId', id)
+  for (const perspective of perspectives) {
+    await db.delete('perspectives', perspective.id)
+  }
+}
+
+/**
+ * 记录项目活动
+ */
+export async function recordNovelProjectActivity(input: {
+  novelId: string
+  type: NovelProjectActivity['type']
+  text: string
+}): Promise<NovelProjectActivity> {
+  const db = await getDB()
+  const now = new Date().toISOString()
+
+  const activity: NovelProjectActivity = {
+    id: nanoid(),
+    novelId: input.novelId,
+    type: input.type,
+    text: input.text,
+    createdAt: now,
+  }
+
+  await db.put('novel_project_activity', activity)
+  return activity
+}
+
+/**
+ * 列出项目的活动记录
+ */
+export async function listNovelProjectActivities(novelId: string): Promise<NovelProjectActivity[]> {
+  const db = await getDB()
+  const activities = await db.getAllFromIndex('novel_project_activity', 'novelId', novelId)
+  return activities.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+/**
+ * 更新或插入项目统计数据
+ */
+export async function upsertNovelProjectStats(stats: NovelProjectStats): Promise<void> {
+  const db = await getDB()
+  await db.put('novel_project_stats', stats)
+}
+
+/**
+ * 获取项目统计数据
+ */
+export async function getNovelProjectStats(novelId: string): Promise<NovelProjectStats | undefined> {
+  const db = await getDB()
+  return db.get('novel_project_stats', novelId)
+}
+
 
 export async function deleteNovelProject(id: string) {
   const db = await getDB()
