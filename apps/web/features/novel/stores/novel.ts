@@ -38,6 +38,7 @@ export const useNovelStore = defineStore('novel', {
     currentChapters: [] as ChapterRecord[],
     currentScenes: [] as SceneRecord[],
     currentEvents: [] as EventRecord[],
+    isCurrentNovelContextLoaded: false,
     loading: false,
     saving: false,
     searchQuery: '',
@@ -100,9 +101,9 @@ export const useNovelStore = defineStore('novel', {
       this.lastError = ''
     },
 
-    // Empty chapter, scene, and event arrays are valid for a loaded novel, so the active novel id is the cache signal.
+    // Fully loaded empty arrays are reusable, but same-novel state that was explicitly cleared must miss the cache.
     hasLoadedNovelContext(id: string) {
-      return this.currentNovel?.id === id
+      return this.currentNovel?.id === id && this.isCurrentNovelContextLoaded
     },
 
     async loadNovels() {
@@ -139,6 +140,7 @@ export const useNovelStore = defineStore('novel', {
         this.currentChapters = chapters
         this.currentScenes = scenes
         this.currentEvents = events
+        this.isCurrentNovelContextLoaded = true
 
         const index = this.novels.findIndex(item => item.id === id)
         if (index === -1) {
@@ -217,6 +219,7 @@ export const useNovelStore = defineStore('novel', {
           this.currentChapters = []
           this.currentScenes = []
           this.currentEvents = []
+          this.isCurrentNovelContextLoaded = false
         }
       } catch (error) {
         console.error('删除项目失败:', error)
@@ -236,6 +239,7 @@ export const useNovelStore = defineStore('novel', {
         this.currentChapters = records
         this.currentScenes = []
         this.currentEvents = []
+        this.isCurrentNovelContextLoaded = false
 
         if (this.currentNovel?.id === novelId) {
           this.currentNovel = await updateNovelProject(novelId, {

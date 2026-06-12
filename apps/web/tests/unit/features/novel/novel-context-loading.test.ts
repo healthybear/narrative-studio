@@ -55,4 +55,56 @@ describe('novel context loading', () => {
     expect(listScenesByNovelSpy).toHaveBeenCalledTimes(1)
     expect(listEventsByNovelSpy).toHaveBeenCalledTimes(1)
   })
+
+  it('invalidates same-novel cache after chapters are replaced', async () => {
+    const novel = await browserDb.createNovelProject({
+      title: '失效缓存测试',
+      rawText: '第一章',
+    })
+    const store = useNovelStore()
+
+    await store.saveNovelChapters(novel.id, [
+      {
+        title: '第一章',
+        content: '章节内容',
+        order: 1,
+        startOffset: 0,
+        endOffset: 4,
+      },
+    ])
+    await store.loadNovelIfNeeded(novel.id)
+
+    expect(store.currentScenes).toHaveLength(1)
+    expect(store.hasLoadedNovelContext(novel.id)).toBe(true)
+
+    await store.saveNovelChapters(novel.id, [
+      {
+        title: '重写第一章',
+        content: '新的章节内容',
+        order: 1,
+        startOffset: 0,
+        endOffset: 6,
+      },
+    ])
+
+    const getNovelProjectSpy = vi.spyOn(browserDb, 'getNovelProject')
+    const listChaptersByNovelSpy = vi.spyOn(browserDb, 'listChaptersByNovel')
+    const listScenesByNovelSpy = vi.spyOn(browserDb, 'listScenesByNovel')
+    const listEventsByNovelSpy = vi.spyOn(browserDb, 'listEventsByNovel')
+
+    expect(store.currentNovel?.id).toBe(novel.id)
+    expect(store.currentScenes).toHaveLength(0)
+    expect(store.currentEvents).toHaveLength(0)
+    expect(store.hasLoadedNovelContext(novel.id)).toBe(false)
+
+    await store.loadNovelIfNeeded(novel.id)
+
+    expect(getNovelProjectSpy).toHaveBeenCalledTimes(1)
+    expect(listChaptersByNovelSpy).toHaveBeenCalledTimes(1)
+    expect(listScenesByNovelSpy).toHaveBeenCalledTimes(1)
+    expect(listEventsByNovelSpy).toHaveBeenCalledTimes(1)
+    expect(store.currentScenes).toHaveLength(1)
+    expect(store.currentChapters[0]?.title).toBe('重写第一章')
+    expect(store.hasLoadedNovelContext(novel.id)).toBe(true)
+  })
 })
