@@ -373,12 +373,52 @@ describe('useEventAnnotation', () => {
     expect(annotation.selectedEventId.value).toBe('event-1')
 
     expect(annotation.jumpToEvent('scene-2', 'event-2')).toBe(false)
-    expect(annotation.selectedSceneId.value).toBe('scene-1')
-    expect(annotation.selectedEventId.value).toBe('event-1')
+    expect(annotation.selectedSceneId.value).toBe('scene-2')
+    expect(annotation.selectedEventId.value).toBe('event-3')
 
     expect(annotation.jumpToEvent('scene-2', 'event-3')).toBe(true)
     expect(annotation.selectedSceneId.value).toBe('scene-2')
     expect(annotation.selectedEventId.value).toBe('event-3')
+  })
+
+  it('preserves unsaved drafts in other scenes when saving the current scene', async () => {
+    const novelStore = seedStore()
+    vi.spyOn(novelStore, 'loadNovel').mockResolvedValue(createTestNovel())
+    vi.spyOn(novelStore, 'saveSceneEvents').mockImplementation(async (_novelId, sceneId, sceneEvents) => {
+      const records: EventRecord[] = sceneEvents.map((event, index) => ({
+        id: event.id ?? `saved-event-${index + 1}`,
+        novelId: 'novel-1',
+        sceneId,
+        title: event.title,
+        type: event.type,
+        description: event.description,
+        order: index,
+        source: event.source,
+        createdAt: '2026-06-12T00:00:00.000Z',
+        updatedAt: '2026-06-12T00:00:00.000Z',
+      }))
+
+      novelStore.currentEvents = [
+        ...novelStore.currentEvents.filter(event => event.sceneId !== sceneId),
+        ...records,
+      ]
+
+      return records
+    })
+
+    const annotation = useEventAnnotation('novel-1')
+    annotation.loadContext()
+
+    annotation.updateEventField('event-2', 'description', 'Scene 1 draft change')
+    annotation.selectScene('scene-2')
+    annotation.updateEventField('event-3', 'title', 'Scene 2 saved title')
+
+    await annotation.saveSelectedSceneEvents()
+
+    annotation.selectScene('scene-1')
+
+    expect(annotation.selectedSceneEvents.value[1]?.description).toBe('Scene 1 draft change')
+    expect(annotation.hasUnsavedChanges.value).toBe(true)
   })
 
   it('tracks unsaved changes for the selected scene before and after save', async () => {

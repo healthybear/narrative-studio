@@ -2,7 +2,7 @@ import { computed, ref, shallowRef, toValue, watch } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
 import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelStore } from '~/features/novel/stores/novel'
-import type { EventDraft } from '~/features/novel/types/novel'
+import type { EventDraft, EventRecord } from '~/features/novel/types/novel'
 import {
   appendEventDraft,
   normalizeEventDrafts,
@@ -141,6 +141,30 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
       : []
   }
 
+  function replaceSceneDrafts(sceneId: string, records: EventRecord[]) {
+    const scenePosition = new Map(scenes.value.map((scene, index) => [scene.id, index] as const))
+    const remainingDrafts = eventDrafts.value.filter(event => event.sceneId !== sceneId)
+
+    // Saving one scene must not reset in-memory drafts from other scenes.
+    eventDrafts.value = normalizeEventDrafts(
+      [...remainingDrafts, ...toEventDrafts(records)]
+        .sort((left, right) => {
+          const leftScenePosition = scenePosition.get(left.sceneId) ?? Number.MAX_SAFE_INTEGER
+          const rightScenePosition = scenePosition.get(right.sceneId) ?? Number.MAX_SAFE_INTEGER
+
+          if (leftScenePosition === rightScenePosition) {
+            if (left.order === right.order) {
+              return left.id.localeCompare(right.id)
+            }
+
+            return left.order - right.order
+          }
+
+          return leftScenePosition - rightScenePosition
+        })
+    )
+  }
+
   function getSceneDrafts(sceneId: string) {
     return normalizeEventDrafts(
       activeEventDrafts.value.filter(event => event.sceneId === sceneId)
@@ -178,12 +202,13 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
       return false
     }
 
+    selectScene(sceneId)
+
     const targetEvent = getSceneDrafts(sceneId).find(event => event.id === eventId)
     if (!targetEvent) {
       return false
     }
 
-    selectScene(sceneId)
     selectEvent(targetEvent.id)
     return true
   }
@@ -233,17 +258,18 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
       return []
     }
 
+    const sceneId = selectedScene.value.id
     const activeEventId = selectedEventId.value
     const sceneEvents = normalizeEventDrafts(
-      activeEventDrafts.value.filter(event => event.sceneId === selectedScene.value!.id)
+      activeEventDrafts.value.filter(event => event.sceneId === sceneId)
     )
     const records = await novelStore.saveSceneEvents(
       novel.value.id,
-      selectedScene.value.id,
+      sceneId,
       sceneEvents
     )
 
-    syncEventDrafts()
+    replaceSceneDrafts(sceneId, records)
     selectedEventId.value = records.find(event => event.id === activeEventId)?.id
       ?? records[0]?.id
       ?? ''
@@ -256,7 +282,7 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
   }
 
   watch(
-    [hasActiveContext, events, scenes],
+    [hasActiveContext, scenes],
     () => {
       loadContext()
     },

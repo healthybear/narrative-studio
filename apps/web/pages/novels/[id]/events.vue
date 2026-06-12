@@ -20,6 +20,8 @@ const {
   novel,
   novelStore,
   scenes,
+  chapterTitleById,
+  eventCounts,
   allEventItems,
   overviewStats,
   selectedSceneId,
@@ -35,7 +37,6 @@ const {
   removeEvent,
   updateEventField,
   saveSelectedSceneEvents,
-  getEventCount,
 } = useEventAnnotation(novelId)
 
 const { hasActiveContext } = watchNovelWorkspaceContext(novelId, {
@@ -58,18 +59,6 @@ const { hasActiveContext } = watchNovelWorkspaceContext(novelId, {
   onSettled: () => {
     loading.value = false
   },
-})
-
-const chapterTitleById = computed<Record<string, string>>(() => {
-  return Object.fromEntries(
-    novelStore.currentChapters.map(chapter => [chapter.id, chapter.title]),
-  )
-})
-
-const eventCounts = computed<Record<string, number>>(() => {
-  return Object.fromEntries(
-    scenes.value.map(scene => [scene.id, getEventCount(scene.id)]),
-  )
 })
 
 const eventTypeOptions = [
