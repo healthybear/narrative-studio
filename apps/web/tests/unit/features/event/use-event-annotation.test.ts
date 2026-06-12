@@ -222,7 +222,7 @@ describe('useEventAnnotation', () => {
   })
 
   it('clears exposed event context when the requested novel changes before store state catches up', async () => {
-    const novelStore = seedStore()
+    seedStore()
     const requestedNovelId = shallowRef('novel-1')
 
     const annotation = useEventAnnotation(computed(() => requestedNovelId.value))

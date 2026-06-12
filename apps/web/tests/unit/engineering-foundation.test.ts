@@ -22,8 +22,9 @@ describe('engineering foundation', () => {
     expect(nuxtConfig).toMatch(/modules:\s*\[[\s\S]*'@unocss\/nuxt'[\s\S]*\]/)
     expect(nuxtConfig).toMatch(/css:\s*\[\s*'~\/assets\/styles\/index\.scss'\s*\]/)
     expect(nuxtConfig).toMatch(
-      /components:\s*\[[\s\S]*path:\s*'~\/components'[\s\S]*pathPrefix:\s*false[\s\S]*path:\s*'~\/features'[\s\S]*pathPrefix:\s*false[\s\S]*\]/,
+      /components:\s*\[[\s\S]*path:\s*'~\/components\/app'[\s\S]*pathPrefix:\s*false[\s\S]*\]/,
     )
+    expect(nuxtConfig).not.toContain("path: '~/features'")
   })
 
   it('uses jsdom in vitest config', () => {

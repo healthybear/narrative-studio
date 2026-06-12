@@ -20,6 +20,7 @@ describe('performance dependency contract', () => {
   it('keeps mammoth behind a lazy import boundary', () => {
     const fileUtils = readFileSync(resolve(webRoot, 'utils/browser/file.ts'), 'utf8')
 
-    expect(fileUtils).toContain("const mammoth = await import('mammoth')")
+    expect(fileUtils).not.toMatch(/^\s*import\s+.*['"]mammoth['"]/m)
+    expect(fileUtils).toMatch(/import\(['"]mammoth['"]\)/)
   })
 })
