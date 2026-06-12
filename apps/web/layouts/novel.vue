@@ -15,15 +15,14 @@ import {
   SunnyOutline,
 } from '@vicons/ionicons5'
 import { useAppTheme } from '~/composables/app/useAppTheme'
-import { useNovelStore } from '~/features/novel/stores/novel'
+import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 
 const route = useRoute()
 const router = useRouter()
-const novelStore = useNovelStore()
 const { isDark, toggleTheme } = useAppTheme()
 
 const novelId = computed(() => route.params.id as string)
-const currentNovel = computed(() => novelStore.currentNovel)
+const { novel: currentNovel } = useNovelWorkspaceContext(novelId)
 
 const activeKey = computed(() => {
   const path = route.path

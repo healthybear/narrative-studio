@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import ProjectActivityFeed from '~/features/novel/components/ProjectActivityFeed.vue'
@@ -69,29 +69,47 @@ const moduleCards = [
   },
 ] as const
 
-onMounted(async () => {
-  try {
-    await Promise.all([
-      projectStore.loadProjects(),
-      projectStore.loadProjectActivities(projectId.value),
-      loadNovelWorkspaceContext(),
-    ])
+watch(
+  projectId,
+  async (id, _previousId, onCleanup) => {
+    let active = true
+    onCleanup(() => {
+      active = false
+    })
+    loading.value = true
 
-    if (!project.value) {
-      message.error('项目不存在')
-      void router.push('/novels')
-      return
+    try {
+      await Promise.all([
+        projectStore.loadProjects(),
+        projectStore.loadProjectActivities(id),
+        loadNovelWorkspaceContext(),
+      ])
+
+      if (!active) {
+        return
+      }
+
+      if (!project.value) {
+        message.error('项目不存在')
+        void router.push('/novels')
+        return
+      }
+
+      await projectStore.markModuleEntered(id, 'overview')
     }
-
-    await projectStore.markModuleEntered(projectId.value, 'overview')
-  }
-  catch {
-    message.error('加载项目失败')
-  }
-  finally {
-    loading.value = false
-  }
-})
+    catch {
+      if (active) {
+        message.error('加载项目失败')
+      }
+    }
+    finally {
+      if (active) {
+        loading.value = false
+      }
+    }
+  },
+  { immediate: true }
+)
 
 function openEditDrawer() {
   showFormDrawer.value = true

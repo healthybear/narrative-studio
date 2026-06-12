@@ -31,6 +31,9 @@ interface CreateNovelInput {
   sourceFileType?: 'txt' | 'docx'
 }
 
+const inflightNovelContextLoads = new Map<string, Promise<NovelProject>>()
+let latestNovelContextLoadRequestId = 0
+
 export const useNovelStore = defineStore('novel', {
   state: () => ({
     novels: [] as NovelProject[],
@@ -122,6 +125,7 @@ export const useNovelStore = defineStore('novel', {
     },
 
     async loadNovel(id: string) {
+      const requestId = ++latestNovelContextLoadRequestId
       this.loading = true
       this.clearError()
 
@@ -134,6 +138,10 @@ export const useNovelStore = defineStore('novel', {
         let scenes = await listScenesByNovel(id)
         if (scenes.length === 0 && chapters.length > 0) {
           scenes = await initializeScenesFromChapters(id)
+        }
+
+        if (requestId !== latestNovelContextLoadRequestId) {
+          return novel
         }
 
         this.currentNovel = novel
@@ -152,10 +160,14 @@ export const useNovelStore = defineStore('novel', {
         return novel
       } catch (error) {
         console.error('加载项目失败:', error)
-        this.setError(error instanceof Error ? error.message : '加载项目失败')
+        if (requestId === latestNovelContextLoadRequestId) {
+          this.setError(error instanceof Error ? error.message : '加载项目失败')
+        }
         throw error
       } finally {
-        this.loading = false
+        if (requestId === latestNovelContextLoadRequestId) {
+          this.loading = false
+        }
       }
     },
 
@@ -164,7 +176,25 @@ export const useNovelStore = defineStore('novel', {
         return this.currentNovel
       }
 
-      return this.loadNovel(id)
+      if (!options.force) {
+        const inflightLoad = inflightNovelContextLoads.get(id)
+        if (inflightLoad) {
+          return inflightLoad
+        }
+      }
+
+      const loadPromise = this.loadNovel(id)
+
+      if (!options.force) {
+        inflightNovelContextLoads.set(id, loadPromise)
+        void loadPromise.finally(() => {
+          if (inflightNovelContextLoads.get(id) === loadPromise) {
+            inflightNovelContextLoads.delete(id)
+          }
+        })
+      }
+
+      return loadPromise
     },
 
     async createNovel(data: CreateNovelInput) {

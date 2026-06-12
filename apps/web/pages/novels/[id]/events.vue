@@ -1,26 +1,23 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue"
-import { useMessage } from "naive-ui"
-import { useRoute, useRouter } from "vue-router"
-import { useEventAnnotation } from "~/features/event/composables/useEventAnnotation"
-import { useNovelWorkspaceContext } from "~/features/novel/composables/useNovelWorkspaceContext"
-import { useNovelProjectStore } from "~/features/novel/stores/project"
+import { computed, shallowRef, watch } from 'vue'
+import { useMessage } from 'naive-ui'
+import { useRoute, useRouter } from 'vue-router'
+import { useEventAnnotation } from '~/features/event/composables/useEventAnnotation'
+import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
+import { useNovelProjectStore } from '~/features/novel/stores/project'
 
-/**
- * äº‹ä»¶æ ‡æ³¨å·¥ä½œåŒºè·¯ç”±é¡µé¢
- * è´Ÿè´£çŠ¶æ€ç®¡ç†ã€æ•°æ®åŠ è½½ã€ä¿å­˜æ“ä½œ
- */
 definePageMeta({
-  layout: "novel",
+  layout: 'novel',
 })
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const projectStore = useNovelProjectStore()
+const loading = shallowRef(true)
 
 const novelId = computed(() => route.params.id as string)
-const { loadNovelWorkspaceContext } = useNovelWorkspaceContext(novelId)
+const { hasActiveContext, loadNovelWorkspaceContext } = useNovelWorkspaceContext(novelId)
 
 const {
   novel,
@@ -38,7 +35,7 @@ const {
   updateEventField,
   saveSelectedSceneEvents,
   getEventCount,
-} = useEventAnnotation(novelId.value)
+} = useEventAnnotation(novelId)
 
 const chapterTitleById = computed<Record<string, string>>(() => {
   return Object.fromEntries(
@@ -53,62 +50,87 @@ const eventCounts = computed<Record<string, number>>(() => {
 })
 
 const eventTypeOptions = [
-  { label: "é“ºåž«", value: "setup" },
-  { label: "å†²çª", value: "conflict" },
-  { label: "è½¬æŠ˜", value: "turning_point" },
-  { label: "é«˜æ½®", value: "climax" },
-  { label: "è§£å†³", value: "resolution" },
-  { label: "ä½™æ³¢", value: "aftermath" },
+  { label: 'ÆÌµæ', value: 'setup' },
+  { label: '³åÍ»', value: 'conflict' },
+  { label: '×ªÕÛ', value: 'turning_point' },
+  { label: '¸ß³±', value: 'climax' },
+  { label: '½â¾ö', value: 'resolution' },
+  { label: 'Óà²¨', value: 'aftermath' },
 ]
 
 async function handleSave() {
   try {
     const records = await saveSelectedSceneEvents()
-    message.success(`å·²ä¿å­˜ ${records.length} ä¸ªäº‹ä»¶`)
+    message.success(`ÒÑ±£´æ ${records.length} ¸öÊÂ¼þ`)
   }
   catch {
-    message.error("ä¿å­˜å¤±è´¥")
+    message.error('±£´æÊ§°Ü')
   }
 }
 
 function handleAutoDetect() {
-  message.info("AI äº‹ä»¶æ£€æµ‹åŠŸèƒ½æš‚æœªæŽ¥å…¥")
+  message.info('AI ÊÂ¼þ¼ì²â¹¦ÄÜÔÝÎ´½ÓÈë')
 }
 
 function handleAddEvent() {
   if (!selectedScene.value) {
-    message.warning("è¯·å…ˆé€‰æ‹©ä¸€ä¸ªåœºæ™¯")
+    message.warning('ÇëÏÈÑ¡ÔñÒ»¸ö³¡¾°')
     return
   }
 
   addEvent()
-  message.success("å·²æ·»åŠ æ–°äº‹ä»¶ï¼Œç¼–è¾‘åŽè®°å¾—ä¿å­˜")
+  message.success('ÒÑÌí¼ÓÐÂÊÂ¼þ£¬±à¼­ºó¼ÇµÃ±£´æ')
 }
 
 function handleRemoveEvent(eventId: string) {
   removeEvent(eventId)
-  message.success("äº‹ä»¶å·²ç§»é™¤ï¼Œä¿å­˜åŽä¼šå†™å…¥æœ¬åœ°æ•°æ®")
+  message.success('ÊÂ¼þÒÑÒÆ³ý£¬±£´æºó»áÐ´Èë±¾µØÊý¾Ý')
 }
 
-function handleUpdateField(payload: { eventId: string; field: "title" | "type" | "description"; value: string | null }) {
+function handleUpdateField(payload: { eventId: string; field: 'title' | 'type' | 'description'; value: string | null }) {
   updateEventField(payload.eventId, payload.field, payload.value)
 }
 
-async function initialize() {
-  try {
-    await loadNovelWorkspaceContext()
-    await loadContext()
-    await projectStore.markModuleEntered(novelId.value, "events")
-  }
-  catch (error) {
-    message.error(error instanceof Error ? error.message : "åŠ è½½é¡¹ç›®å¤±è´¥")
-    router.push("/novels")
-  }
-}
+watch(
+  novelId,
+  async (id, _previousId, onCleanup) => {
+    let active = true
+    onCleanup(() => {
+      active = false
+    })
+    loading.value = true
 
-onMounted(() => {
-  void initialize()
-})
+    try {
+      await loadNovelWorkspaceContext()
+
+      if (!active) {
+        return
+      }
+
+      loadContext()
+
+      if (!novel.value) {
+        message.error('ÏîÄ¿²»´æÔÚ')
+        void router.push('/novels')
+        return
+      }
+
+      await projectStore.markModuleEntered(id, 'events')
+    }
+    catch (error) {
+      if (active) {
+        message.error(error instanceof Error ? error.message : '¼ÓÔØÏîÄ¿Ê§°Ü')
+        void router.push('/novels')
+      }
+    }
+    finally {
+      if (active) {
+        loading.value = false
+      }
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -116,7 +138,7 @@ onMounted(() => {
     <n-page-header @back="router.push(`/novels/${novelId}`)">
       <template #title>
         <n-space align="center">
-          <span>äº‹ä»¶æ ‡æ³¨</span>
+          <span>ÊÂ¼þ±ê×¢</span>
           <n-tag v-if="novel" type="info">{{ novel.title }}</n-tag>
         </n-space>
       </template>
@@ -125,14 +147,19 @@ onMounted(() => {
     <n-alert
       v-if="novelStore.lastError"
       type="error"
-      title="å¤„ç†å¤±è´¥"
+      title="´¦ÀíÊ§°Ü"
       closable
       @close="novelStore.clearError()"
     >
       {{ novelStore.lastError }}
     </n-alert>
 
+    <div v-if="loading" class="events-route__loading">
+      <n-spin size="large" />
+    </div>
+
     <EventWorkspace
+      v-else-if="hasActiveContext && novel"
       :novel="novel"
       :scenes="scenes"
       :selected-scene-id="selectedSceneId"
@@ -162,5 +189,12 @@ onMounted(() => {
   height: 100vh;
   padding: 16px;
   overflow: hidden;
+}
+
+.events-route__loading {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
 }
 </style>

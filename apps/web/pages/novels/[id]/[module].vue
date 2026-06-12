@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import ProjectActivityFeed from '~/features/novel/components/ProjectActivityFeed.vue'
@@ -71,32 +71,47 @@ const stats = computed(() => projectStore.statsById[projectId.value])
 const activities = computed(() => projectStore.activityById[projectId.value] || [])
 const currentModule = computed(() => (isSupportedModule.value ? moduleMeta[moduleKey.value] : null))
 
-onMounted(async () => {
-  if (!isSupportedModule.value) {
-    message.error('模块不存在')
-    void router.replace(`/novels/${projectId.value}`)
-    return
-  }
+watch(
+  [projectId, rawModule],
+  async ([id], _previous, onCleanup) => {
+    let active = true
+    onCleanup(() => {
+      active = false
+    })
 
-  try {
-    await Promise.all([
-      projectStore.loadProjects(),
-      projectStore.loadProjectActivities(projectId.value),
-      loadNovelWorkspaceContext(),
-    ])
-
-    if (!project.value) {
-      message.error('项目不存在')
-      void router.replace('/novels')
+    if (!isSupportedModule.value) {
+      message.error('模块不存在')
+      void router.replace(`/novels/${id}`)
       return
     }
 
-    await projectStore.markModuleEntered(projectId.value, moduleKey.value as NovelProjectStats['lastActiveModule'])
-  }
-  catch {
-    message.error('加载模块失败')
-  }
-})
+    try {
+      await Promise.all([
+        projectStore.loadProjects(),
+        projectStore.loadProjectActivities(id),
+        loadNovelWorkspaceContext(),
+      ])
+
+      if (!active) {
+        return
+      }
+
+      if (!project.value) {
+        message.error('项目不存在')
+        void router.replace('/novels')
+        return
+      }
+
+      await projectStore.markModuleEntered(id, moduleKey.value as NovelProjectStats['lastActiveModule'])
+    }
+    catch {
+      if (active) {
+        message.error('加载模块失败')
+      }
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>

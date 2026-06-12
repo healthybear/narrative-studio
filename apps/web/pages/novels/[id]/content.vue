@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, shallowRef } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import ContentWorkspace from '~/features/novel/components/content/ContentWorkspace.vue'
 import { useContentWorkspace } from '~/features/novel/composables/useContentWorkspace'
@@ -37,25 +37,6 @@ const activeScenes = computed(() => {
   return instance.getSceneDrafts(chapterId)
 })
 
-async function hydrateWorkspace() {
-  await Promise.all([
-    loadNovelWorkspaceContext(),
-    projectStore.markModuleEntered(novelId.value, 'content'),
-  ])
-
-  if (!novel.value) {
-    message.error('项目不存在')
-    void router.replace('/novels')
-    return
-  }
-
-  workspace.value = useContentWorkspace({
-    novel: novel.value,
-    chapters: chapters.value,
-    scenes: scenes.value,
-  })
-}
-
 async function reloadWorkspace() {
   await loadNovelWorkspaceContext({ force: true })
 
@@ -70,18 +51,52 @@ async function reloadWorkspace() {
   )
 }
 
-onMounted(async () => {
-  try {
-    await hydrateWorkspace()
-  }
-  catch (error) {
-    console.error(error)
-    message.error('加载内容工作台失败')
-  }
-  finally {
-    loading.value = false
-  }
-})
+watch(
+  novelId,
+  async (id, _previousId, onCleanup) => {
+    let active = true
+    onCleanup(() => {
+      active = false
+    })
+    loading.value = true
+    workspace.value = null
+
+    try {
+      await Promise.all([
+        loadNovelWorkspaceContext(),
+        projectStore.markModuleEntered(id, 'content'),
+      ])
+
+      if (!active) {
+        return
+      }
+
+      if (!novel.value) {
+        message.error('项目不存在')
+        void router.replace('/novels')
+        return
+      }
+
+      workspace.value = useContentWorkspace({
+        novel: novel.value,
+        chapters: chapters.value,
+        scenes: scenes.value,
+      })
+    }
+    catch (error) {
+      if (active) {
+        console.error(error)
+        message.error('加载内容工作台失败')
+      }
+    }
+    finally {
+      if (active) {
+        loading.value = false
+      }
+    }
+  },
+  { immediate: true }
+)
 
 function handleDetectChapters() {
   if (!workspace.value) {

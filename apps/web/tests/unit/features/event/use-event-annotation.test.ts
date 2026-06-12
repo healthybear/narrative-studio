@@ -1,3 +1,4 @@
+import { computed, nextTick, shallowRef } from 'vue'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useEventAnnotation } from '~/features/event/composables/useEventAnnotation'
@@ -117,6 +118,7 @@ describe('useEventAnnotation', () => {
     novelStore.currentNovel = createTestNovel()
     novelStore.currentScenes = createTestScenes()
     novelStore.currentEvents = createTestEvents()
+    novelStore.isCurrentNovelContextLoaded = true
 
     vi.spyOn(novelStore, 'loadNovel').mockResolvedValue(createTestNovel())
 
@@ -137,6 +139,7 @@ describe('useEventAnnotation', () => {
     novelStore.currentNovel = createTestNovel()
     novelStore.currentScenes = createTestScenes()
     novelStore.currentEvents = createTestEvents()
+    novelStore.isCurrentNovelContextLoaded = true
 
     vi.spyOn(novelStore, 'loadNovel').mockResolvedValue(createTestNovel())
 
@@ -155,6 +158,7 @@ describe('useEventAnnotation', () => {
     novelStore.currentNovel = createTestNovel()
     novelStore.currentScenes = createTestScenes()
     novelStore.currentEvents = createTestEvents()
+    novelStore.isCurrentNovelContextLoaded = true
 
     vi.spyOn(novelStore, 'loadNovel').mockResolvedValue(createTestNovel())
 
@@ -175,6 +179,7 @@ describe('useEventAnnotation', () => {
     novelStore.currentScenes = createTestScenes()
     const events = createTestEvents()
     novelStore.currentEvents = events
+    novelStore.isCurrentNovelContextLoaded = true
 
     vi.spyOn(novelStore, 'loadNovel').mockResolvedValue(createTestNovel())
     vi.spyOn(novelStore, 'saveSceneEvents').mockResolvedValue([events[0]!, events[1]!])
@@ -195,6 +200,7 @@ describe('useEventAnnotation', () => {
     novelStore.currentScenes = createTestScenes()
     const events = createTestEvents()
     novelStore.currentEvents = events
+    novelStore.isCurrentNovelContextLoaded = true
 
     vi.spyOn(novelStore, 'loadNovel').mockResolvedValue(createTestNovel())
     vi.spyOn(novelStore, 'saveSceneEvents').mockResolvedValue([events[0]!])
@@ -214,6 +220,7 @@ describe('useEventAnnotation', () => {
     novelStore.currentNovel = createTestNovel()
     novelStore.currentScenes = createTestScenes()
     novelStore.currentEvents = createTestEvents()
+    novelStore.isCurrentNovelContextLoaded = true
 
     vi.spyOn(novelStore, 'loadNovel').mockResolvedValue(createTestNovel())
 
@@ -223,5 +230,32 @@ describe('useEventAnnotation', () => {
     expect(annotation.getEventCount('scene-1')).toBe(2)
     expect(annotation.getEventCount('scene-2')).toBe(1)
     expect(annotation.getEventCount('scene-999')).toBe(0)
+  })
+  it('clears exposed event context when the requested novel changes before store state catches up', async () => {
+    const novelStore = useNovelStore()
+    const requestedNovelId = shallowRef('novel-1')
+
+    novelStore.currentNovel = createTestNovel()
+    novelStore.currentScenes = createTestScenes()
+    novelStore.currentEvents = createTestEvents()
+    novelStore.isCurrentNovelContextLoaded = true
+
+    const annotation = useEventAnnotation(computed(() => requestedNovelId.value))
+    await annotation.loadContext()
+
+    expect(annotation.novel.value?.id).toBe('novel-1')
+    expect(annotation.selectedSceneId.value).toBe('scene-1')
+    expect(annotation.selectedEventId.value).toBe('event-1')
+
+    requestedNovelId.value = 'novel-2'
+    await nextTick()
+
+    expect(annotation.novel.value).toBeNull()
+    expect(annotation.scenes.value).toEqual([])
+    expect(annotation.selectedScene.value).toBeNull()
+    expect(annotation.selectedSceneEvents.value).toEqual([])
+    expect(annotation.selectedEvent.value).toBeNull()
+    expect(annotation.selectedSceneId.value).toBe('')
+    expect(annotation.selectedEventId.value).toBe('')
   })
 })

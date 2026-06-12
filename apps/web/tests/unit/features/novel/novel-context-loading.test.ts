@@ -30,6 +30,31 @@ describe('novel context loading', () => {
     expect(listEventsByNovelSpy).toHaveBeenCalledTimes(1)
   })
 
+  it('deduplicates concurrent in-flight loads for the same novel context', async () => {
+    const novel = await browserDb.createNovelProject({
+      title: '并发加载测试',
+      rawText: '第一章',
+    })
+    const store = useNovelStore()
+    const getNovelProjectSpy = vi.spyOn(browserDb, 'getNovelProject')
+    const listChaptersByNovelSpy = vi.spyOn(browserDb, 'listChaptersByNovel')
+    const listScenesByNovelSpy = vi.spyOn(browserDb, 'listScenesByNovel')
+    const listEventsByNovelSpy = vi.spyOn(browserDb, 'listEventsByNovel')
+
+    const [firstResult, secondResult] = await Promise.all([
+      store.loadNovelIfNeeded(novel.id),
+      store.loadNovelIfNeeded(novel.id),
+    ])
+
+    expect(firstResult?.id).toBe(novel.id)
+    expect(secondResult?.id).toBe(novel.id)
+    expect(store.hasLoadedNovelContext(novel.id)).toBe(true)
+    expect(getNovelProjectSpy).toHaveBeenCalledTimes(1)
+    expect(listChaptersByNovelSpy).toHaveBeenCalledTimes(1)
+    expect(listScenesByNovelSpy).toHaveBeenCalledTimes(1)
+    expect(listEventsByNovelSpy).toHaveBeenCalledTimes(1)
+  })
+
   it('forces a fresh IndexedDB read when requested', async () => {
     const novel = await browserDb.createNovelProject({
       title: '强制刷新测试',
