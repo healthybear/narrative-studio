@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import type { EventDraft, SceneRecord } from '~/features/novel/types/novel'
 
-/**
- * 事件详情面板
- * 显示场景内容和选中事件的编辑表单
- */
 const props = defineProps<{
   scene: SceneRecord | null
   selectedEvent: EventDraft | null
@@ -35,26 +31,30 @@ function handleRemoveEvent() {
     </div>
 
     <div class="panel-body">
-      <n-empty v-if="!scene" description="请先选择一个场景" />
+      <div v-if="!scene" class="empty-state">
+        <n-empty description="先选择一个场景" />
+        <p class="empty-state__hint">选择场景后，可以查看正文并编辑对应事件。</p>
+      </div>
 
       <n-space v-else vertical :size="16">
-        <!-- 场景内容预览 -->
         <n-card size="small" title="场景内容" embedded>
           <template #header-extra>
             <n-tag size="small">{{ scene.wordCount }} 字</n-tag>
           </template>
           <n-scrollbar style="max-height: 200px">
-            <n-text depth="2" style="white-space: pre-wrap">{{ scene.content }}</n-text>
+            <n-text depth="2" style="white-space: pre-wrap">
+              {{ scene.content || '当前场景暂无正文。' }}
+            </n-text>
           </n-scrollbar>
         </n-card>
 
         <n-divider />
 
-        <!-- 事件编辑表单 -->
-        <n-empty
-          v-if="!selectedEvent"
-          description="请从中间列表选择一个事件进行编辑，或点击新增创建新事件"
-        />
+        <div v-if="!selectedEvent" class="empty-state">
+          <n-alert type="info" title="还没有选中事件">
+            从中间列表选择一个事件开始编辑，也可以先创建一个新事件。
+          </n-alert>
+        </div>
 
         <n-form v-else label-placement="top" :disabled="saving">
           <n-form-item label="事件标题">
@@ -133,5 +133,17 @@ function handleRemoveEvent() {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty-state__hint {
+  margin: 0;
+  color: var(--n-text-color-3);
+  line-height: 1.6;
 }
 </style>

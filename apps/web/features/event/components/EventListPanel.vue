@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import type { SceneRecord, EventDraft } from "~/features/novel/types/novel"
+import { computed } from 'vue'
+import type { EventDraft, SceneRecord } from '~/features/novel/types/novel'
 
-/**
- * 事件列表面板
- * 显示当前场景的所有事件
- */
 const props = defineProps<{
   selectedScene: SceneRecord | null
   events: EventDraft[]
@@ -20,7 +17,7 @@ const emit = defineEmits<{
 
 const eventTypeLabelMap = computed(() => {
   return Object.fromEntries(
-    props.eventTypeOptions.map(option => [option.value, option.label])
+    props.eventTypeOptions.map(option => [option.value, option.label]),
   ) as Record<string, string>
 })
 </script>
@@ -37,24 +34,27 @@ const eventTypeLabelMap = computed(() => {
         <template #icon>
           <n-icon><i-carbon-add /></n-icon>
         </template>
-        新增
+        新增事件
       </n-button>
     </div>
 
     <div class="panel-body">
-      <n-empty
-        v-if="!selectedScene"
-        description="请先从左侧选择一个场景"
-      />
+      <div v-if="!selectedScene" class="empty-state">
+        <n-empty description="先从左侧选择一个场景" />
+        <p class="empty-state__hint">选择场景后，就可以为它整理关键事件。</p>
+      </div>
 
       <template v-else>
-        <n-alert
-          v-if="events.length === 0"
-          type="info"
-          style="margin-bottom: 16px"
-        >
-          当前场景还没有事件，点击右上角新增开始标注
-        </n-alert>
+        <div v-if="events.length === 0" class="empty-state empty-state--scene">
+          <n-empty description="当前场景还没有事件" />
+          <p class="empty-state__hint">创建第一个事件，开始梳理这个场景的关键情节。</p>
+          <n-button type="primary" @click="emit('addEvent')">
+            <template #icon>
+              <n-icon><i-carbon-add /></n-icon>
+            </template>
+            创建第一个事件
+          </n-button>
+        </div>
 
         <n-scrollbar v-else style="max-height: calc(100vh - 320px)">
           <n-space vertical :size="12">
@@ -143,6 +143,24 @@ const eventTypeLabelMap = computed(() => {
   flex: 1;
   padding: 20px;
   overflow: hidden;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.empty-state--scene {
+  justify-content: center;
+  min-height: 240px;
+}
+
+.empty-state__hint {
+  margin: 0;
+  color: var(--n-text-color-3);
+  line-height: 1.6;
 }
 
 .event-card {
