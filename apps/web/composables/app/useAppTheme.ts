@@ -1,13 +1,12 @@
-﻿import { computed, onMounted } from 'vue'
+﻿import { computed } from 'vue'
 import { darkTheme } from 'naive-ui'
 import { useAppStore } from '~/stores/app'
 
 export function useAppTheme() {
   const appStore = useAppStore()
 
-  onMounted(() => {
+  if (import.meta.client && !appStore.themeInitialized)
     appStore.initializeTheme()
-  })
 
   const isDark = computed(() => appStore.isDark)
   const theme = computed(() => (isDark.value ? darkTheme : null))

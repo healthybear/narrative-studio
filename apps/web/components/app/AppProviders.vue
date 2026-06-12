@@ -11,7 +11,7 @@ import {
   zhCN,
 } from 'naive-ui'
 
-// Theme state still comes from useAppTheme; only IndexedDB startup was removed from this boundary.
+// Theme wiring stays here; data startup does not.
 const { theme } = useAppTheme()
 </script>
 

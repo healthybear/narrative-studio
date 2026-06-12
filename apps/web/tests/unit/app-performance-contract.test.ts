@@ -10,6 +10,16 @@ const webRoot = resolve(currentDir, '..', '..')
 const read = (path: string) => readFileSync(path, 'utf8')
 
 describe('app performance contract', () => {
+  it('initializes saved theme during setup instead of waiting for onMounted', () => {
+    const appTheme = read(resolve(webRoot, 'composables/app/useAppTheme.ts'))
+    const initializeThemeGuard = appTheme.match(/if\s*\(([\s\S]*?)\)\s*appStore\.initializeTheme\(\)/)
+
+    expect(initializeThemeGuard).toBeTruthy()
+    expect(initializeThemeGuard?.[1]).toContain('import.meta.client')
+    expect(initializeThemeGuard?.[1]).toContain('!appStore.themeInitialized')
+    expect(appTheme).not.toContain('onMounted')
+  })
+
   it('limits Nuxt component scanning to the app shell boundary', () => {
     const nuxtConfig = read(resolve(webRoot, 'nuxt.config.ts'))
     const componentsBlock = nuxtConfig.match(/components:\s*\[([\s\S]*?)\]\s*,\s*\n\s*typescript:/)
@@ -25,6 +35,7 @@ describe('app performance contract', () => {
     const providers = read(resolve(webRoot, 'components/app/AppProviders.vue'))
     const scriptBlock = providers.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)
 
+    expect(scriptBlock?.[1]).toContain('useAppTheme')
     expect(scriptBlock?.[1]).not.toContain('initDB')
     expect(scriptBlock?.[1]).not.toContain('onMounted')
     expect(scriptBlock?.[1]).not.toContain('~/utils/browser/db')
