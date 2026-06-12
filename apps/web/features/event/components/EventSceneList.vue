@@ -1,10 +1,15 @@
 ﻿<script setup lang="ts">
 import type { SceneRecord } from '~/features/novel/types/novel'
 
+/**
+ * 场景导航列表
+ * 显示所有场景及其章节信息、事件数量、字数
+ */
 defineProps<{
   scenes: SceneRecord[]
   selectedSceneId: string
   eventCounts: Record<string, number>
+  chapterTitleById: Record<string, string>
 }>()
 
 const emit = defineEmits<{
@@ -13,44 +18,89 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <n-card title="场景列表" class="panel-card">
-    <n-empty v-if="!scenes.length" description="当前项目还没有可标注的场景" />
-    <n-space v-else vertical :size="10">
-      <n-card
-        v-for="scene in scenes"
-        :key="scene.id"
-        size="small"
-        class="scene-card"
-        :class="{ selected: selectedSceneId === scene.id }"
-        @click="emit('select', scene.id)"
-      >
-        <n-space vertical :size="6">
-          <n-space justify="space-between" align="center">
-            <n-text strong>{{ scene.title }}</n-text>
-            <n-tag size="small" type="info">{{ eventCounts[scene.id] ?? 0 }} 个事件</n-tag>
-          </n-space>
-          <n-text depth="3">字数：{{ scene.wordCount }}</n-text>
-          <n-text depth="3">范围：{{ scene.startOffset }} - {{ scene.endOffset }}</n-text>
+  <div class="scene-list-panel">
+    <div class="panel-header">
+      <h3 class="panel-title">场景导航</h3>
+      <n-tag size="small" type="info">{{ scenes.length }} 个场景</n-tag>
+    </div>
+
+    <div class="panel-body">
+      <n-empty v-if="!scenes.length" description="请先在内容模块准备章节和场景" />
+
+      <n-scrollbar v-else style="max-height: calc(100vh - 280px)">
+        <n-space vertical :size="8">
+          <n-card
+            v-for="scene in scenes"
+            :key="scene.id"
+            size="small"
+            class="scene-card"
+            :class="{ 'scene-card--selected': selectedSceneId === scene.id }"
+            hoverable
+            @click="emit('select', scene.id)"
+          >
+            <n-space vertical :size="6">
+              <n-text strong style="font-size: 14px">{{ scene.title }}</n-text>
+
+              <n-text depth="3" style="font-size: 12px">
+                {{ chapterTitleById[scene.chapterId] || '未命名章节' }}
+              </n-text>
+
+              <n-space :size="8">
+                <n-tag size="tiny" :bordered="false">
+                  {{ eventCounts[scene.id] ?? 0 }} 事件
+                </n-tag>
+                <n-tag size="tiny" :bordered="false">
+                  {{ scene.wordCount }} 字
+                </n-tag>
+              </n-space>
+            </n-space>
+          </n-card>
         </n-space>
-      </n-card>
-    </n-space>
-  </n-card>
+      </n-scrollbar>
+    </div>
+  </div>
 </template>
 
-<style scoped>
-.panel-card {
+<style scoped lang="scss">
+.scene-list-panel {
+  display: flex;
+  flex-direction: column;
   height: 100%;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--n-divider-color);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.panel-body {
+  flex: 1;
+  padding: 16px;
+  overflow: hidden;
 }
 
 .scene-card {
   cursor: pointer;
-  border: 1px solid transparent;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
 
-.scene-card.selected {
-  border-color: #2080f0;
-  box-shadow: 0 0 0 1px rgba(32, 128, 240, 0.18);
+  &:hover {
+    border-color: var(--n-border-color);
+  }
+
+  &--selected {
+    border-color: var(--n-color-target);
+    box-shadow: 0 0 0 1px var(--n-color-target);
+  }
 }
 </style>
 

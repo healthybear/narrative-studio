@@ -36,7 +36,7 @@ const handleSearchInput = (value: string) => {
  * 处理状态筛选
  */
 const handleStatusChange = (value: string) => {
-  emit('update:statusFilter', value as typeof props.statusFilter)
+  emit('update:statusFilter', value as 'all' | 'draft' | 'active' | 'archived' | 'trash')
 }
 </script>
 

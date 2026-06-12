@@ -1,7 +1,11 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import type { EventDraft, SceneRecord } from '~/features/novel/types/novel'
 
-defineProps<{
+/**
+ * 事件详情面板
+ * 显示场景内容和选中事件的编辑表单
+ */
+const props = defineProps<{
   scene: SceneRecord | null
   selectedEvent: EventDraft | null
   saving: boolean
@@ -9,88 +13,125 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  addEvent: []
-  saveEvents: []
-  autoDetect: []
   removeEvent: [eventId: string]
-  updateField: [eventId: string, field: 'title' | 'type' | 'description', value: string | null]
+  updateField: [payload: { eventId: string; field: 'title' | 'type' | 'description'; value: string | null }]
 }>()
+
+function handleUpdateField(field: 'title' | 'type' | 'description', value: string) {
+  if (!props.selectedEvent) return
+  emit('updateField', { eventId: props.selectedEvent.id, field, value })
+}
+
+function handleRemoveEvent() {
+  if (!props.selectedEvent) return
+  emit('removeEvent', props.selectedEvent.id)
+}
 </script>
 
 <template>
-  <n-card title="事件详情" class="panel-card">
-    <n-empty v-if="!scene" description="请先选择一个场景" />
+  <div class="event-detail-panel">
+    <div class="panel-header">
+      <h3 class="panel-title">场景与事件详情</h3>
+    </div>
 
-    <n-space v-else vertical :size="16">
-      <n-card size="small" embedded>
-        <n-space vertical :size="8">
-          <n-space justify="space-between" align="center">
-            <n-text strong>{{ scene.title }}</n-text>
+    <div class="panel-body">
+      <n-empty v-if="!scene" description="请先选择一个场景" />
+
+      <n-space v-else vertical :size="16">
+        <!-- 场景内容预览 -->
+        <n-card size="small" title="场景内容" embedded>
+          <template #header-extra>
             <n-tag size="small">{{ scene.wordCount }} 字</n-tag>
+          </template>
+          <n-scrollbar style="max-height: 200px">
+            <n-text depth="2" style="white-space: pre-wrap">{{ scene.content }}</n-text>
+          </n-scrollbar>
+        </n-card>
+
+        <n-divider />
+
+        <!-- 事件编辑表单 -->
+        <n-empty
+          v-if="!selectedEvent"
+          description="请从中间列表选择一个事件进行编辑，或点击新增创建新事件"
+        />
+
+        <n-form v-else label-placement="top" :disabled="saving">
+          <n-form-item label="事件标题">
+            <n-input
+              :value="selectedEvent.title"
+              placeholder="例如：主角做出关键决定"
+              @update:value="(val: string) => handleUpdateField('title', val)"
+            />
+          </n-form-item>
+
+          <n-form-item label="事件类型">
+            <n-select
+              :value="selectedEvent.type"
+              :options="eventTypeOptions"
+              placeholder="选择事件的叙事功能"
+              @update:value="(val: string) => handleUpdateField('type', val)"
+            />
+          </n-form-item>
+
+          <n-form-item label="事件描述">
+            <n-input
+              :value="selectedEvent.description ?? ''"
+              type="textarea"
+              :rows="8"
+              placeholder="描述事件的内容、影响和重要性"
+              @update:value="(val: string) => handleUpdateField('description', val)"
+            />
+          </n-form-item>
+
+          <n-space justify="space-between" align="center">
+            <n-tag
+              v-if="selectedEvent.source === 'ai'"
+              size="small"
+              type="info"
+            >
+              AI 检测
+            </n-tag>
+            <n-tag v-else size="small">手动标注</n-tag>
+
+            <n-button
+              text
+              type="error"
+              @click="handleRemoveEvent"
+            >
+              <template #icon>
+                <n-icon><i-carbon-trash-can /></n-icon>
+              </template>
+              删除事件
+            </n-button>
           </n-space>
-          <n-input :value="scene.content" type="textarea" :rows="8" readonly />
-        </n-space>
-      </n-card>
-
-      <n-space>
-        <n-button type="primary" @click="emit('addEvent')">新增事件</n-button>
-        <n-button :loading="saving" @click="emit('saveEvents')">保存当前场景事件</n-button>
-        <n-button quaternary @click="emit('autoDetect')">AI 检测（预留）</n-button>
+        </n-form>
       </n-space>
-
-      <n-empty
-        v-if="!selectedEvent"
-        description="当前场景还没有事件，点击“新增事件”开始标注"
-      />
-
-      <n-form v-else label-placement="top">
-        <n-form-item label="事件标题">
-          <n-input
-            :value="selectedEvent.title"
-            placeholder="例如：会议破裂"
-            @update:value="(value: string) => selectedEvent && emit('updateField', selectedEvent.id, 'title', value)"
-          />
-        </n-form-item>
-
-        <n-form-item label="事件类型">
-          <n-select
-            :value="selectedEvent.type"
-            :options="eventTypeOptions"
-            placeholder="请选择事件类型"
-            @update:value="(value: string) => selectedEvent && emit('updateField', selectedEvent.id, 'type', value)"
-          />
-        </n-form-item>
-
-        <n-form-item label="事件描述">
-          <n-input
-            :value="selectedEvent.description ?? ''"
-            type="textarea"
-            :rows="6"
-            placeholder="记录事件发生了什么，以及它为什么重要"
-            @update:value="(value: string) => selectedEvent && emit('updateField', selectedEvent.id, 'description', value)"
-          />
-        </n-form-item>
-
-        <n-alert type="info" title="AI 能力预留">
-          当前阶段先以手动标注为主。后续接入 NLP 服务后，这里会展示候选事件、置信度和人工确认结果。
-        </n-alert>
-
-        <n-space justify="space-between" align="center">
-          <n-text depth="3">
-            来源：{{ selectedEvent.source === 'ai' ? 'AI 建议' : '手动录入' }}
-          </n-text>
-          <n-button tertiary type="error" @click="emit('removeEvent', selectedEvent.id)">
-            删除当前事件
-          </n-button>
-        </n-space>
-      </n-form>
-    </n-space>
-  </n-card>
+    </div>
+  </div>
 </template>
 
-<style scoped>
-.panel-card {
+<style scoped lang="scss">
+.event-detail-panel {
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
-</style>
 
+.panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--n-divider-color);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.panel-body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+</style>

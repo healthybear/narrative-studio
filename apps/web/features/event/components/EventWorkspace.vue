@@ -1,257 +1,194 @@
-﻿<script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { AddOutline, FlashOutline, SaveOutline } from '@vicons/ionicons5'
-import { useMessage } from 'naive-ui'
-import { useEventAnnotation } from '~/features/event/composables/useEventAnnotation'
+<script setup lang="ts">
+import type { NovelProject, SceneRecord, EventDraft } from '~/features/novel/types/novel'
 
-const props = defineProps<{
-  novelId: string
+/**
+ * 事件工作区展示容器
+ * 纯展示组件，所有状态和逻辑由父组件管理
+ */
+defineProps<{
+  novel: NovelProject | null
+  scenes: SceneRecord[]
+  selectedSceneId: string
+  selectedScene: SceneRecord | null
+  selectedSceneEvents: EventDraft[]
+  selectedEvent: EventDraft | null
+  eventCounts: Record<string, number>
+  chapterTitleById: Record<string, string>
+  saving: boolean
+  eventTypeOptions: Array<{ label: string; value: string }>
 }>()
 
-const router = useRouter()
-const message = useMessage()
-const {
-  novel,
-  novelStore,
-  scenes,
-  selectedSceneId,
-  selectedScene,
-  selectedSceneEvents,
-  selectedEvent,
-  loadContext,
-  selectScene,
-  selectEvent,
-  addEvent,
-  removeEvent,
-  updateEventField,
-  saveSelectedSceneEvents,
-  getEventCount,
-} = useEventAnnotation(props.novelId)
-
-const chapterTitleById = computed<Record<string, string>>(() => {
-  return Object.fromEntries(
-    novelStore.currentChapters.map(chapter => [chapter.id, chapter.title])
-  )
-})
-
-const eventCounts = computed<Record<string, number>>(() => {
-  return Object.fromEntries(
-    scenes.value.map(scene => [scene.id, getEventCount(scene.id)])
-  )
-})
-
-const eventTypeOptions = [
-  { label: '铺垫', value: 'setup' },
-  { label: '冲突', value: 'conflict' },
-  { label: '转折', value: 'turning_point' },
-  { label: '高潮', value: 'climax' },
-  { label: '解决', value: 'resolution' },
-  { label: '余波', value: 'aftermath' },
-]
-
-const eventTypeLabelMap = Object.fromEntries(
-  eventTypeOptions.map(option => [option.value, option.label])
-) as Record<string, string>
-
-async function handleSave() {
-  try {
-    const records = await saveSelectedSceneEvents()
-    message.success(`已保存 ${records.length} 个事件`)
-  } catch (error: unknown) {
-    message.error(error instanceof Error ? error.message : '保存失败')
-  }
-}
-
-function handleAutoDetect() {
-  message.info('AI 事件检测功能暂未接入')
-}
-
-function handleAddEvent() {
-  if (!selectedScene.value) {
-    message.warning('请先选择一个场景')
-    return
-  }
-
-  addEvent()
-}
-
-function handleRemoveEvent(eventId: string) {
-  removeEvent(eventId)
-  message.success('事件已移除，保存后会写入本地数据')
-}
-
-async function initialize() {
-  try {
-    await loadContext()
-  } catch (error: unknown) {
-    message.error(error instanceof Error ? error.message : '加载项目失败')
-  }
-}
-
-onMounted(() => {
-  void initialize()
-})
+defineEmits<{
+  selectScene: [sceneId: string]
+  selectEvent: [eventId: string]
+  addEvent: []
+  removeEvent: [eventId: string]
+  updateEventField: [payload: { eventId: string; field: 'title' | 'type' | 'description'; value: string | null }]
+  save: []
+  autoDetect: []
+}>()
 </script>
 
 <template>
-  <div class="events-page">
-    <n-page-header @back="router.push('/novels')">
-      <template #title>
-        <n-space align="center">
-          <span>事件标注</span>
-          <n-tag v-if="novel" type="info">{{ novel.title }}</n-tag>
+  <div class="event-workspace">
+    <!-- 总览头部 -->
+    <div class="workspace-header">
+      <div class="header-info">
+        <h2 class="workspace-title">{{ novel?.title || '事件标注' }}</h2>
+        <n-space class="header-stats">
+          <n-statistic label="总场景数" :value="scenes.length" />
+          <n-statistic label="总事件数" :value="Object.values(eventCounts).reduce((sum, count) => sum + count, 0)" />
+          <n-statistic
+            v-if="selectedScene"
+            label="当前场景事件"
+            :value="selectedSceneEvents.length"
+          />
+          <n-text v-if="selectedScene" depth="3">
+            {{ chapterTitleById[selectedScene.chapterId] || '未命名章节' }}
+          </n-text>
         </n-space>
-      </template>
+      </div>
 
-      <template #extra>
-        <n-space>
-          <n-button :disabled="!selectedScene" @click="handleAutoDetect">
-            <template #icon>
-              <n-icon :component="FlashOutline" />
-            </template>
-            AI 检测
-          </n-button>
+      <n-space class="header-actions">
+        <n-button :disabled="!selectedScene" @click="$emit('autoDetect')">
+          <template #icon>
+            <n-icon><i-carbon-flash /></n-icon>
+          </template>
+          AI 检测
+        </n-button>
 
-          <n-button :disabled="!selectedScene" @click="handleAddEvent">
-            <template #icon>
-              <n-icon :component="AddOutline" />
-            </template>
-            新增事件
-          </n-button>
+        <n-button :disabled="!selectedScene" @click="$emit('addEvent')">
+          <template #icon>
+            <n-icon><i-carbon-add /></n-icon>
+          </template>
+          新增事件
+        </n-button>
 
-          <n-button
-            type="primary"
-            :loading="novelStore.saving"
-            :disabled="!selectedScene"
-            @click="handleSave"
-          >
-            <template #icon>
-              <n-icon :component="SaveOutline" />
-            </template>
-            保存事件
-          </n-button>
-        </n-space>
-      </template>
-    </n-page-header>
+        <n-button
+          type="primary"
+          :loading="saving"
+          :disabled="!selectedScene"
+          @click="$emit('save')"
+        >
+          <template #icon>
+            <n-icon><i-carbon-save /></n-icon>
+          </template>
+          保存当前场景
+        </n-button>
+      </n-space>
+    </div>
 
-    <n-alert
-      v-if="novelStore.lastError"
-      type="error"
-      title="处理失败"
-      closable
-      @close="novelStore.clearError()"
-    >
-      {{ novelStore.lastError }}
-    </n-alert>
-
-    <n-grid class="main-grid" :cols="24" :x-gap="16" :y-gap="16">
-      <n-grid-item :span="6">
+    <!-- 三栏布局 -->
+    <div class="workspace-content">
+      <!-- 场景导航面板 -->
+      <div class="workspace-panel workspace-panel--scenes">
         <EventSceneList
           :scenes="scenes"
           :selected-scene-id="selectedSceneId"
           :event-counts="eventCounts"
-          @select="selectScene"
+          :chapter-title-by-id="chapterTitleById"
+          @select="$emit('selectScene', $event)"
         />
-      </n-grid-item>
+      </div>
 
-      <n-grid-item :span="10">
-        <n-card class="panel-card" title="事件列表">
-          <template #header-extra>
-            <n-text v-if="selectedScene" depth="3">
-              {{ chapterTitleById[selectedScene.chapterId] || '未命名章节' }}
-            </n-text>
-          </template>
+      <!-- 事件列表面板 -->
+      <div class="workspace-panel workspace-panel--events">
+        <EventListPanel
+          :selected-scene="selectedScene"
+          :events="selectedSceneEvents"
+          :selected-event-id="selectedEvent?.id || ''"
+          :event-type-options="eventTypeOptions"
+          @select-event="$emit('selectEvent', $event)"
+          @add-event="$emit('addEvent')"
+          @remove-event="$emit('removeEvent', $event)"
+        />
+      </div>
 
-          <n-empty v-if="!selectedScene" description="请先从左侧选择一个场景" />
-
-          <template v-else>
-            <n-space vertical :size="12">
-              <n-alert type="info" title="标注说明">
-                建议先拆分场景中的关键事件，再逐条补充类型和描述，方便后续分析与回看。
-              </n-alert>
-
-              <n-empty
-                v-if="!selectedSceneEvents.length"
-                description="当前场景还没有事件，点击右上角“新增事件”开始标注"
-              />
-
-              <n-card
-                v-for="sceneEvent in selectedSceneEvents"
-                :key="sceneEvent.id"
-                class="event-card"
-                :class="{ selected: selectedEvent?.id === sceneEvent.id }"
-                size="small"
-                @click="selectEvent(sceneEvent.id)"
-              >
-                <n-space vertical :size="8">
-                  <n-space justify="space-between" align="center">
-                    <n-space align="center">
-                      <n-tag size="small" type="primary">#{{ sceneEvent.order }}</n-tag>
-                      <n-text strong>{{ sceneEvent.title }}</n-text>
-                    </n-space>
-                    <n-tag size="small" :bordered="false">
-                      {{ eventTypeLabelMap[sceneEvent.type] || '未分类' }}
-                    </n-tag>
-                  </n-space>
-
-                  <n-text depth="3">
-                    {{ sceneEvent.description || '请补充该事件的简要说明。' }}
-                  </n-text>
-                </n-space>
-              </n-card>
-            </n-space>
-          </template>
-        </n-card>
-      </n-grid-item>
-
-      <n-grid-item :span="8">
+      <!-- 事件详情面板 -->
+      <div class="workspace-panel workspace-panel--detail">
         <EventDetailPanel
           :scene="selectedScene"
           :selected-event="selectedEvent"
-          :saving="novelStore.saving"
+          :saving="saving"
           :event-type-options="eventTypeOptions"
-          @add-event="handleAddEvent"
-          @save-events="handleSave"
-          @auto-detect="handleAutoDetect"
-          @remove-event="handleRemoveEvent"
-          @update-field="updateEventField"
+          @update-field="$emit('updateEventField', $event)"
+          @remove-event="$emit('removeEvent', $event)"
         />
-      </n-grid-item>
-    </n-grid>
+      </div>
+    </div>
   </div>
 </template>
 
-<style scoped>
-.events-page {
+<style scoped lang="scss">
+.event-workspace {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.main-grid {
-  align-items: stretch;
-}
-
-.panel-card {
+  gap: 24px;
   height: 100%;
 }
 
-.event-card {
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+.workspace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 24px;
+  background: var(--n-color);
+  border-radius: 8px;
+  gap: 24px;
 }
 
-.event-card.selected {
-  border-color: #18a058;
-  box-shadow: 0 0 0 1px rgba(24, 160, 88, 0.18);
+.header-info {
+  flex: 1;
+}
+
+.workspace-title {
+  margin: 0 0 16px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.header-stats {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.workspace-content {
+  display: grid;
+  grid-template-columns: 280px 1fr 320px;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.workspace-panel {
+  background: var(--n-color);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 1400px) {
+  .workspace-content {
+    grid-template-columns: 240px 1fr 280px;
+  }
 }
 
 @media (max-width: 1200px) {
-  :deep(.main-grid) {
-    display: flex;
-    flex-direction: column;
+  .workspace-content {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .workspace-panel--scenes {
+    max-height: 300px;
   }
 }
 </style>
-
