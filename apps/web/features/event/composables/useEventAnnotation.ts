@@ -1,4 +1,4 @@
-import { computed, shallowRef, toValue, watch } from 'vue'
+import { computed, ref, shallowRef, toValue, watch } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
 import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelStore } from '~/features/novel/stores/novel'
@@ -21,7 +21,7 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
   } = useNovelWorkspaceContext(() => toValue(novelId))
   const selectedSceneId = shallowRef('')
   const selectedEventId = shallowRef('')
-  const eventDrafts = shallowRef<EventDraft[]>([])
+  const eventDrafts = ref<EventDraft[]>([])
   const activeEventDrafts = computed(() => (hasActiveContext.value ? eventDrafts.value : []))
 
   const chapterOrderById = computed<Record<string, number>>(() => {

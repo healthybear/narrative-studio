@@ -1,4 +1,5 @@
-ï»¿import { defineStore } from 'pinia'
+import { defineStore } from 'pinia'
+import { markRaw } from 'vue'
 import type {
   ChapterDraftInput,
   ChapterRecord,
@@ -31,8 +32,6 @@ interface CreateNovelInput {
   sourceFileType?: 'txt' | 'docx'
 }
 
-const inflightNovelContextLoads = new Map<string, Promise<NovelProject>>()
-let latestNovelContextLoadRequestId = 0
 
 export const useNovelStore = defineStore('novel', {
   state: () => ({
@@ -49,6 +48,8 @@ export const useNovelStore = defineStore('novel', {
     sortBy: 'updatedAt' as 'updatedAt' | 'createdAt' | 'title' | 'wordCount',
     sortOrder: 'desc' as 'asc' | 'desc',
     lastError: '' as string,
+    inflightNovelContextLoads: markRaw(new Map<string, Promise<NovelProject>>()),
+    latestNovelContextLoadRequestId: 0,
   }),
 
   getters: {
@@ -116,8 +117,8 @@ export const useNovelStore = defineStore('novel', {
       try {
         this.novels = await listNovelProjects()
       } catch (error) {
-        console.error('åŠ è½½é¡¹ç›®åˆ—è¡¨å¤±è´¥:', error)
-        this.setError(error instanceof Error ? error.message : 'åŠ è½½é¡¹ç›®åˆ—è¡¨å¤±è´¥')
+        console.error('¼ÓÔØÏîÄ¿ÁĞ±íÊ§°Ü:', error)
+        this.setError(error instanceof Error ? error.message : '¼ÓÔØÏîÄ¿ÁĞ±íÊ§°Ü')
         throw error
       } finally {
         this.loading = false
@@ -125,7 +126,7 @@ export const useNovelStore = defineStore('novel', {
     },
 
     async loadNovel(id: string) {
-      const requestId = ++latestNovelContextLoadRequestId
+      const requestId = ++this.latestNovelContextLoadRequestId
       this.loading = true
       this.clearError()
 
@@ -140,7 +141,7 @@ export const useNovelStore = defineStore('novel', {
           scenes = await initializeScenesFromChapters(id)
         }
 
-        if (requestId !== latestNovelContextLoadRequestId) {
+        if (requestId !== this.latestNovelContextLoadRequestId) {
           return novel
         }
 
@@ -159,13 +160,13 @@ export const useNovelStore = defineStore('novel', {
 
         return novel
       } catch (error) {
-        console.error('åŠ è½½é¡¹ç›®å¤±è´¥:', error)
-        if (requestId === latestNovelContextLoadRequestId) {
-          this.setError(error instanceof Error ? error.message : 'åŠ è½½é¡¹ç›®å¤±è´¥')
+        console.error('¼ÓÔØÏîÄ¿Ê§°Ü:', error)
+        if (requestId === this.latestNovelContextLoadRequestId) {
+          this.setError(error instanceof Error ? error.message : '¼ÓÔØÏîÄ¿Ê§°Ü')
         }
         throw error
       } finally {
-        if (requestId === latestNovelContextLoadRequestId) {
+        if (requestId === this.latestNovelContextLoadRequestId) {
           this.loading = false
         }
       }
@@ -177,7 +178,7 @@ export const useNovelStore = defineStore('novel', {
       }
 
       if (!options.force) {
-        const inflightLoad = inflightNovelContextLoads.get(id)
+        const inflightLoad = this.inflightNovelContextLoads.get(id)
         if (inflightLoad) {
           return inflightLoad
         }
@@ -186,10 +187,10 @@ export const useNovelStore = defineStore('novel', {
       const loadPromise = this.loadNovel(id)
 
       if (!options.force) {
-        inflightNovelContextLoads.set(id, loadPromise)
+        this.inflightNovelContextLoads.set(id, loadPromise)
         void loadPromise.finally(() => {
-          if (inflightNovelContextLoads.get(id) === loadPromise) {
-            inflightNovelContextLoads.delete(id)
+          if (this.inflightNovelContextLoads.get(id) === loadPromise) {
+            this.inflightNovelContextLoads.delete(id)
           }
         })
       }
@@ -206,8 +207,8 @@ export const useNovelStore = defineStore('novel', {
         this.novels.unshift(novel)
         return novel
       } catch (error) {
-        console.error('åˆ›å»ºé¡¹ç›®å¤±è´¥:', error)
-        this.setError(error instanceof Error ? error.message : 'åˆ›å»ºé¡¹ç›®å¤±è´¥')
+        console.error('´´½¨ÏîÄ¿Ê§°Ü:', error)
+        this.setError(error instanceof Error ? error.message : '´´½¨ÏîÄ¿Ê§°Ü')
         throw error
       } finally {
         this.saving = false
@@ -229,8 +230,8 @@ export const useNovelStore = defineStore('novel', {
         }
         return updated
       } catch (error) {
-        console.error('æ›´æ–°é¡¹ç›®å¤±è´¥:', error)
-        this.setError(error instanceof Error ? error.message : 'æ›´æ–°é¡¹ç›®å¤±è´¥')
+        console.error('¸üĞÂÏîÄ¿Ê§°Ü:', error)
+        this.setError(error instanceof Error ? error.message : '¸üĞÂÏîÄ¿Ê§°Ü')
         throw error
       } finally {
         this.saving = false
@@ -252,8 +253,8 @@ export const useNovelStore = defineStore('novel', {
           this.isCurrentNovelContextLoaded = false
         }
       } catch (error) {
-        console.error('åˆ é™¤é¡¹ç›®å¤±è´¥:', error)
-        this.setError(error instanceof Error ? error.message : 'åˆ é™¤é¡¹ç›®å¤±è´¥')
+        console.error('É¾³ıÏîÄ¿Ê§°Ü:', error)
+        this.setError(error instanceof Error ? error.message : 'É¾³ıÏîÄ¿Ê§°Ü')
         throw error
       } finally {
         this.saving = false
@@ -285,8 +286,8 @@ export const useNovelStore = defineStore('novel', {
 
         return records
       } catch (error) {
-        console.error('ä¿å­˜ç« èŠ‚å¤±è´¥:', error)
-        this.setError(error instanceof Error ? error.message : 'ä¿å­˜ç« èŠ‚å¤±è´¥')
+        console.error('±£´æÕÂ½ÚÊ§°Ü:', error)
+        this.setError(error instanceof Error ? error.message : '±£´æÕÂ½ÚÊ§°Ü')
         throw error
       } finally {
         this.saving = false
@@ -307,11 +308,11 @@ export const useNovelStore = defineStore('novel', {
         const validSceneIds = new Set(records.map(scene => scene.id))
         const remaining = this.currentScenes.filter(scene => scene.chapterId !== chapterId)
 
-        // åˆå¹¶åœºæ™¯å¹¶æŒ‰ç« èŠ‚é¡ºåºæ’åº
+        // ºÏ²¢³¡¾°²¢°´ÕÂ½ÚË³ĞòÅÅĞò
         const allScenes = [...remaining, ...records]
         const chapterOrderMap = new Map<string, number>()
 
-        // æ„å»ºç« èŠ‚é¡ºåºæ˜ å°„
+        // ¹¹½¨ÕÂ½ÚË³ĞòÓ³Éä
         if (this.currentNovel) {
           const chapters = await listChaptersByNovel(this.currentNovel.id)
           chapters.forEach(chapter => {
@@ -335,8 +336,8 @@ export const useNovelStore = defineStore('novel', {
         )
         return records
       } catch (error) {
-        console.error('ä¿å­˜åœºæ™¯å¤±è´¥:', error)
-        this.setError(error instanceof Error ? error.message : 'ä¿å­˜åœºæ™¯å¤±è´¥')
+        console.error('±£´æ³¡¾°Ê§°Ü:', error)
+        this.setError(error instanceof Error ? error.message : '±£´æ³¡¾°Ê§°Ü')
         throw error
       } finally {
         this.saving = false
@@ -366,8 +367,8 @@ export const useNovelStore = defineStore('novel', {
 
         return records
       } catch (error) {
-        console.error('ä¿å­˜äº‹ä»¶å¤±è´¥:', error)
-        this.setError(error instanceof Error ? error.message : 'ä¿å­˜äº‹ä»¶å¤±è´¥')
+        console.error('±£´æÊÂ¼şÊ§°Ü:', error)
+        this.setError(error instanceof Error ? error.message : '±£´æÊÂ¼şÊ§°Ü')
         throw error
       } finally {
         this.saving = false
@@ -388,4 +389,5 @@ export const useNovelStore = defineStore('novel', {
     },
   },
 })
+
 

@@ -95,16 +95,13 @@ describe('useNovelWorkspaceContext', () => {
 
   it('loads the requested novel context through loadNovelIfNeeded', async () => {
     const novelStore = useNovelStore()
-    const projectStore = useNovelProjectStore()
     const novel = createNovel('novel-1')
     const loadNovelIfNeeded = vi.spyOn(novelStore, 'loadNovelIfNeeded').mockResolvedValue(novel)
-    const markModuleEntered = vi.spyOn(projectStore, 'markModuleEntered').mockResolvedValue()
     const loadNovel = vi.spyOn(novelStore, 'loadNovel')
 
-    await expect(loadNovelWorkspaceContext('novel-1', { module: 'overview' })).resolves.toBe(novel)
+    await expect(loadNovelWorkspaceContext('novel-1')).resolves.toBe(novel)
 
-    expect(loadNovelIfNeeded).toHaveBeenCalledWith('novel-1', { module: 'overview' })
-    expect(markModuleEntered).toHaveBeenCalledWith('novel-1', 'overview')
+    expect(loadNovelIfNeeded).toHaveBeenCalledWith('novel-1', {})
     expect(loadNovel).not.toHaveBeenCalled()
   })
 
@@ -140,6 +137,7 @@ describe('useNovelWorkspaceContext', () => {
     const novelStore = useNovelStore()
     const projectStore = useNovelProjectStore()
     const requestedNovelId = shallowRef('novel-1')
+    const requestedModule = shallowRef<'content' | 'events'>('content')
     const loadNovelIfNeeded = vi.spyOn(novelStore, 'loadNovelIfNeeded')
       .mockImplementation(async (id: string) => createNovel(id))
     const markModuleEntered = vi.spyOn(projectStore, 'markModuleEntered').mockResolvedValue()
@@ -147,22 +145,69 @@ describe('useNovelWorkspaceContext', () => {
 
     const context = watchNovelWorkspaceContext(
       computed(() => requestedNovelId.value),
-      { module: 'content', onLoaded },
+      {
+        module: computed(() => requestedModule.value),
+        onLoaded,
+      },
     )
 
     await vi.waitFor(() => {
-      expect(loadNovelIfNeeded).toHaveBeenNthCalledWith(1, 'novel-1', { force: undefined, module: 'content' })
+      expect(loadNovelIfNeeded).toHaveBeenNthCalledWith(1, 'novel-1', { force: undefined })
       expect(markModuleEntered).toHaveBeenNthCalledWith(1, 'novel-1', 'content')
       expect(onLoaded).toHaveBeenNthCalledWith(1, 'novel-1')
     })
 
     requestedNovelId.value = 'novel-2'
+    requestedModule.value = 'events'
 
     await vi.waitFor(() => {
-      expect(loadNovelIfNeeded).toHaveBeenNthCalledWith(2, 'novel-2', { force: undefined, module: 'content' })
-      expect(markModuleEntered).toHaveBeenNthCalledWith(2, 'novel-2', 'content')
+      expect(loadNovelIfNeeded).toHaveBeenNthCalledWith(2, 'novel-2', { force: undefined })
+      expect(markModuleEntered).toHaveBeenNthCalledWith(2, 'novel-2', 'events')
       expect(onLoaded).toHaveBeenNthCalledWith(2, 'novel-2')
     })
+
+    context.stop()
+  })
+
+  it('does not record stale module entry after a newer route request replaces the old one', async () => {
+    const novelStore = useNovelStore()
+    const projectStore = useNovelProjectStore()
+    const requestedNovelId = shallowRef('novel-1')
+    const loadNovelIfNeeded = vi.spyOn(novelStore, 'loadNovelIfNeeded')
+    const markModuleEntered = vi.spyOn(projectStore, 'markModuleEntered').mockResolvedValue()
+
+    let resolveFirstLoad!: (novel: NovelProject) => void
+    let resolveSecondLoad!: (novel: NovelProject) => void
+
+    loadNovelIfNeeded
+      .mockImplementationOnce(() => new Promise(resolve => {
+        resolveFirstLoad = resolve
+      }))
+      .mockImplementationOnce(() => new Promise(resolve => {
+        resolveSecondLoad = resolve
+      }))
+
+    const context = watchNovelWorkspaceContext(
+      computed(() => requestedNovelId.value),
+      { module: 'content' },
+    )
+
+    await vi.waitFor(() => {
+      expect(loadNovelIfNeeded).toHaveBeenCalledTimes(1)
+    })
+
+    requestedNovelId.value = 'novel-2'
+    await Promise.resolve()
+    resolveSecondLoad(createNovel('novel-2'))
+
+    await vi.waitFor(() => {
+      expect(markModuleEntered).toHaveBeenCalledWith('novel-2', 'content')
+    })
+
+    resolveFirstLoad(createNovel('novel-1'))
+    await Promise.resolve()
+
+    expect(markModuleEntered).toHaveBeenCalledTimes(1)
 
     context.stop()
   })

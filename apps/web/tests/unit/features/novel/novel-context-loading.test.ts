@@ -11,8 +11,8 @@ describe('novel context loading', () => {
 
   it('skips duplicate IndexedDB reads for an already loaded novel context', async () => {
     const novel = await browserDb.createNovelProject({
-      title: '重复加载测试',
-      rawText: '第一章',
+      title: 'duplicate load',
+      rawText: 'chapter one',
     })
     const store = useNovelStore()
     const getNovelProjectSpy = vi.spyOn(browserDb, 'getNovelProject')
@@ -32,8 +32,8 @@ describe('novel context loading', () => {
 
   it('deduplicates concurrent in-flight loads for the same novel context', async () => {
     const novel = await browserDb.createNovelProject({
-      title: '并发加载测试',
-      rawText: '第一章',
+      title: 'concurrent load',
+      rawText: 'chapter one',
     })
     const store = useNovelStore()
     const getNovelProjectSpy = vi.spyOn(browserDb, 'getNovelProject')
@@ -55,10 +55,33 @@ describe('novel context loading', () => {
     expect(listEventsByNovelSpy).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps in-flight dedupe scoped to each store instance', async () => {
+    const novel = await browserDb.createNovelProject({
+      title: 'multi store isolation',
+      rawText: 'chapter one',
+    })
+    const getNovelProjectSpy = vi.spyOn(browserDb, 'getNovelProject')
+
+    const firstPinia = createPinia()
+    setActivePinia(firstPinia)
+    const firstStore = useNovelStore()
+
+    const secondPinia = createPinia()
+    setActivePinia(secondPinia)
+    const secondStore = useNovelStore()
+
+    await Promise.all([
+      firstStore.loadNovelIfNeeded(novel.id),
+      secondStore.loadNovelIfNeeded(novel.id),
+    ])
+
+    expect(getNovelProjectSpy).toHaveBeenCalledTimes(2)
+  })
+
   it('forces a fresh IndexedDB read when requested', async () => {
     const novel = await browserDb.createNovelProject({
-      title: '强制刷新测试',
-      rawText: '第一章',
+      title: 'force reload',
+      rawText: 'chapter one',
     })
     const store = useNovelStore()
     const getNovelProjectSpy = vi.spyOn(browserDb, 'getNovelProject')
@@ -83,18 +106,18 @@ describe('novel context loading', () => {
 
   it('invalidates same-novel cache after chapters are replaced', async () => {
     const novel = await browserDb.createNovelProject({
-      title: '失效缓存测试',
-      rawText: '第一章',
+      title: 'invalidate cache',
+      rawText: 'chapter one',
     })
     const store = useNovelStore()
 
     await store.saveNovelChapters(novel.id, [
       {
-        title: '第一章',
-        content: '章节内容',
+        title: 'Chapter 1',
+        content: 'alpha beta',
         order: 1,
         startOffset: 0,
-        endOffset: 4,
+        endOffset: 10,
       },
     ])
     await store.loadNovelIfNeeded(novel.id)
@@ -104,11 +127,11 @@ describe('novel context loading', () => {
 
     await store.saveNovelChapters(novel.id, [
       {
-        title: '重写第一章',
-        content: '新的章节内容',
+        title: 'Chapter 1 rewritten',
+        content: 'alpha beta gamma',
         order: 1,
         startOffset: 0,
-        endOffset: 6,
+        endOffset: 16,
       },
     ])
 
@@ -129,7 +152,7 @@ describe('novel context loading', () => {
     expect(listScenesByNovelSpy).toHaveBeenCalledTimes(1)
     expect(listEventsByNovelSpy).toHaveBeenCalledTimes(1)
     expect(store.currentScenes).toHaveLength(1)
-    expect(store.currentChapters[0]?.title).toBe('重写第一章')
+    expect(store.currentChapters[0]?.title).toBe('Chapter 1 rewritten')
     expect(store.hasLoadedNovelContext(novel.id)).toBe(true)
   })
 })

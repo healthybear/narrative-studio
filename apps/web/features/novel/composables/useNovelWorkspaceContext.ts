@@ -6,10 +6,10 @@ import type { NovelProjectStats } from '~/features/novel/types/novel'
 
 interface LoadNovelWorkspaceContextOptions {
   force?: boolean
-  module?: NovelProjectStats['lastActiveModule']
 }
 
 interface WatchNovelWorkspaceContextOptions extends LoadNovelWorkspaceContextOptions {
+  module?: MaybeRefOrGetter<NovelProjectStats['lastActiveModule']>
   onStart?: (novelId: string) => void
   onLoaded?: (novelId: string) => Promise<void> | void
   onError?: (error: unknown, novelId: string) => void
@@ -25,14 +25,7 @@ export async function loadNovelWorkspaceContext(
   }
 
   const novelStore = useNovelStore()
-  const novel = await novelStore.loadNovelIfNeeded(novelId, options)
-
-  if (options.module) {
-    const projectStore = useNovelProjectStore()
-    await projectStore.markModuleEntered(novelId, options.module)
-  }
-
-  return novel
+  return novelStore.loadNovelIfNeeded(novelId, options)
 }
 
 export function useNovelWorkspaceContext(novelId: MaybeRefOrGetter<string>) {
@@ -61,10 +54,12 @@ export function watchNovelWorkspaceContext(
   options: WatchNovelWorkspaceContextOptions = {},
 ) {
   const context = useNovelWorkspaceContext(novelId)
+  const projectStore = useNovelProjectStore()
+  const requestedModule = computed(() => toValue(options.module))
 
   const stop = watch(
-    () => context.novelId.value,
-    async (requestedNovelId, _previousNovelId, onCleanup) => {
+    () => [context.novelId.value, requestedModule.value] as const,
+    async ([requestedNovelId, module], _previousValue, onCleanup) => {
       if (!requestedNovelId) {
         return
       }
@@ -79,8 +74,11 @@ export function watchNovelWorkspaceContext(
       try {
         await context.loadNovelWorkspaceContext({
           force: options.force,
-          module: options.module,
         })
+
+        if (!cancelled && module) {
+          await projectStore.markModuleEntered(requestedNovelId, module)
+        }
 
         if (!cancelled) {
           await options.onLoaded?.(requestedNovelId)

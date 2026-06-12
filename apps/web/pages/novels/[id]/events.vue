@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { useMessage } from 'naive-ui'
 import { useRoute, useRouter } from 'vue-router'
 import { useEventAnnotation } from '~/features/event/composables/useEventAnnotation'
-import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
+import { watchNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 
 definePageMeta({
   layout: 'novel',
@@ -15,7 +15,6 @@ const message = useMessage()
 const loading = shallowRef(true)
 
 const novelId = computed(() => route.params.id as string)
-const { hasActiveContext, loadNovelWorkspaceContext } = useNovelWorkspaceContext(novelId)
 
 const {
   novel,
@@ -34,6 +33,28 @@ const {
   saveSelectedSceneEvents,
   getEventCount,
 } = useEventAnnotation(novelId)
+
+const { hasActiveContext } = watchNovelWorkspaceContext(novelId, {
+  module: 'events',
+  onStart: () => {
+    loading.value = true
+  },
+  onLoaded: async () => {
+    loadContext()
+
+    if (!novel.value) {
+      message.error('项目不存在')
+      await router.push('/novels')
+    }
+  },
+  onError: async (error) => {
+    message.error(error instanceof Error ? error.message : '加载项目失败')
+    await router.push('/novels')
+  },
+  onSettled: () => {
+    loading.value = false
+  },
+})
 
 const chapterTitleById = computed<Record<string, string>>(() => {
   return Object.fromEntries(
@@ -85,49 +106,9 @@ function handleRemoveEvent(eventId: string) {
   message.success('事件已移除，保存后会写入本地数据')
 }
 
-function handleUpdateField(payload: { eventId: string; field: 'title' | 'type' | 'description'; value: string | null }) {
+function handleUpdateField(payload: { eventId: string, field: 'title' | 'type' | 'description', value: string | null }) {
   updateEventField(payload.eventId, payload.field, payload.value)
 }
-
-watch(
-  novelId,
-  async (id, _previousId, onCleanup) => {
-    let active = true
-    onCleanup(() => {
-      active = false
-    })
-    loading.value = true
-
-    try {
-      await loadNovelWorkspaceContext({ module: 'events' })
-
-      if (!active) {
-        return
-      }
-
-      loadContext()
-
-      if (!novel.value) {
-        message.error('项目不存在')
-        void router.push('/novels')
-        return
-      }
-
-    }
-    catch (error) {
-      if (active) {
-        message.error(error instanceof Error ? error.message : '加载项目失败')
-        void router.push('/novels')
-      }
-    }
-    finally {
-      if (active) {
-        loading.value = false
-      }
-    }
-  },
-  { immediate: true }
-)
 </script>
 
 <template>
@@ -195,5 +176,3 @@ watch(
   justify-content: center;
 }
 </style>
-
-

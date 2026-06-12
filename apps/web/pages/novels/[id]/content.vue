@@ -1,9 +1,9 @@
 ﻿<script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { useMessage } from 'naive-ui'
 import ContentWorkspace from '~/features/novel/components/content/ContentWorkspace.vue'
 import { useContentWorkspace } from '~/features/novel/composables/useContentWorkspace'
-import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
+import { watchNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelStore } from '~/features/novel/stores/novel'
 
 const route = useRoute()
@@ -22,7 +22,33 @@ const {
   loadNovelWorkspaceContext,
   novel,
   scenes,
-} = useNovelWorkspaceContext(novelId)
+} = watchNovelWorkspaceContext(novelId, {
+  module: 'content',
+  onStart: () => {
+    loading.value = true
+    workspace.value = null
+  },
+  onLoaded: async () => {
+    if (!novel.value) {
+      message.error('项目不存在')
+      await router.replace('/novels')
+      return
+    }
+
+    workspace.value = useContentWorkspace({
+      novel: novel.value,
+      chapters: chapters.value,
+      scenes: scenes.value,
+    })
+  },
+  onError: (error) => {
+    console.error(error)
+    message.error('加载内容工作台失败')
+  },
+  onSettled: () => {
+    loading.value = false
+  },
+})
 const projectTitle = computed(() => novel.value?.title || '内容工作台')
 const activeChapter = computed(() => workspace.value?.selectedChapter.value || null)
 const activeScenes = computed(() => {
@@ -48,52 +74,6 @@ async function reloadWorkspace() {
     scenes.value,
   )
 }
-
-watch(
-  novelId,
-  async (id, _previousId, onCleanup) => {
-    let active = true
-    onCleanup(() => {
-      active = false
-    })
-    loading.value = true
-    workspace.value = null
-
-    try {
-      await Promise.all([
-        loadNovelWorkspaceContext({ module: 'content' }),
-      ])
-
-      if (!active) {
-        return
-      }
-
-      if (!novel.value) {
-        message.error('项目不存在')
-        void router.replace('/novels')
-        return
-      }
-
-      workspace.value = useContentWorkspace({
-        novel: novel.value,
-        chapters: chapters.value,
-        scenes: scenes.value,
-      })
-    }
-    catch (error) {
-      if (active) {
-        console.error(error)
-        message.error('加载内容工作台失败')
-      }
-    }
-    finally {
-      if (active) {
-        loading.value = false
-      }
-    }
-  },
-  { immediate: true }
-)
 
 function handleDetectChapters() {
   if (!workspace.value) {

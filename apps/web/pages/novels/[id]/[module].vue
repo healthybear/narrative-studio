@@ -1,9 +1,9 @@
 ﻿<script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import ProjectActivityFeed from '~/features/novel/components/ProjectActivityFeed.vue'
-import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
+import { watchNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelProjectStore } from '~/features/novel/stores/project'
 
 const route = useRoute()
@@ -62,53 +62,35 @@ const moduleMeta: Record<ModuleKey, { title: string, description: string, hint: 
 
 const projectId = computed(() => route.params.id as string)
 const rawModule = computed(() => route.params.module as string)
-const { loadNovelWorkspaceContext } = useNovelWorkspaceContext(projectId)
 const moduleKey = computed(() => rawModule.value as ModuleKey)
 const isSupportedModule = computed(() => supportedModules.includes(moduleKey.value))
+watchNovelWorkspaceContext(projectId, {
+  module: computed(() => (isSupportedModule.value ? moduleKey.value : null)),
+  onLoaded: async (id) => {
+    if (!isSupportedModule.value) {
+      message.error('模块不存在')
+      await router.replace(`/novels/${id}`)
+      return
+    }
+
+    await Promise.all([
+      projectStore.loadProjects(),
+      projectStore.loadProjectActivities(id),
+    ])
+
+    if (!project.value) {
+      message.error('项目不存在')
+      await router.replace('/novels')
+    }
+  },
+  onError: () => {
+    message.error('加载模块失败')
+  },
+})
 const project = computed(() => projectStore.projects.find(item => item.id === projectId.value))
 const stats = computed(() => projectStore.statsById[projectId.value])
 const activities = computed(() => projectStore.activityById[projectId.value] || [])
 const currentModule = computed(() => (isSupportedModule.value ? moduleMeta[moduleKey.value] : null))
-
-watch(
-  [projectId, rawModule],
-  async ([id], _previous, onCleanup) => {
-    let active = true
-    onCleanup(() => {
-      active = false
-    })
-
-    if (!isSupportedModule.value) {
-      message.error('模块不存在')
-      void router.replace(`/novels/${id}`)
-      return
-    }
-
-    try {
-      await Promise.all([
-        projectStore.loadProjects(),
-        projectStore.loadProjectActivities(id),
-        loadNovelWorkspaceContext({ module: moduleKey.value }),
-      ])
-
-      if (!active) {
-        return
-      }
-
-      if (!project.value) {
-        message.error('项目不存在')
-        void router.replace('/novels')
-        return
-      }
-    }
-    catch {
-      if (active) {
-        message.error('加载模块失败')
-      }
-    }
-  },
-  { immediate: true }
-)
 </script>
 
 <template>
