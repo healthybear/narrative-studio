@@ -1,9 +1,12 @@
 import { computed, toValue, watch } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
+import { useNovelProjectStore } from '~/features/novel/stores/project'
 import { useNovelStore } from '~/features/novel/stores/novel'
+import type { NovelProjectStats } from '~/features/novel/types/novel'
 
 interface LoadNovelWorkspaceContextOptions {
   force?: boolean
+  module?: NovelProjectStats['lastActiveModule']
 }
 
 interface WatchNovelWorkspaceContextOptions extends LoadNovelWorkspaceContextOptions {
@@ -22,7 +25,14 @@ export async function loadNovelWorkspaceContext(
   }
 
   const novelStore = useNovelStore()
-  return novelStore.loadNovelIfNeeded(novelId, options)
+  const novel = await novelStore.loadNovelIfNeeded(novelId, options)
+
+  if (options.module) {
+    const projectStore = useNovelProjectStore()
+    await projectStore.markModuleEntered(novelId, options.module)
+  }
+
+  return novel
 }
 
 export function useNovelWorkspaceContext(novelId: MaybeRefOrGetter<string>) {
@@ -67,7 +77,10 @@ export function watchNovelWorkspaceContext(
       options.onStart?.(requestedNovelId)
 
       try {
-        await context.loadNovelWorkspaceContext({ force: options.force })
+        await context.loadNovelWorkspaceContext({
+          force: options.force,
+          module: options.module,
+        })
 
         if (!cancelled) {
           await options.onLoaded?.(requestedNovelId)

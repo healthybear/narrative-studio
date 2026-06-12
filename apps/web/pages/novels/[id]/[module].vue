@@ -5,7 +5,6 @@ import { useMessage } from 'naive-ui'
 import ProjectActivityFeed from '~/features/novel/components/ProjectActivityFeed.vue'
 import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelProjectStore } from '~/features/novel/stores/project'
-import type { NovelProjectStats } from '~/features/novel/types/novel'
 
 const route = useRoute()
 const router = useRouter()
@@ -89,7 +88,7 @@ watch(
       await Promise.all([
         projectStore.loadProjects(),
         projectStore.loadProjectActivities(id),
-        loadNovelWorkspaceContext(),
+        loadNovelWorkspaceContext({ module: moduleKey.value }),
       ])
 
       if (!active) {
@@ -101,8 +100,6 @@ watch(
         void router.replace('/novels')
         return
       }
-
-      await projectStore.markModuleEntered(id, moduleKey.value as NovelProjectStats['lastActiveModule'])
     }
     catch {
       if (active) {

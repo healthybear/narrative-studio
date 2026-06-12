@@ -5,13 +5,11 @@ import ContentWorkspace from '~/features/novel/components/content/ContentWorkspa
 import { useContentWorkspace } from '~/features/novel/composables/useContentWorkspace'
 import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelStore } from '~/features/novel/stores/novel'
-import { useNovelProjectStore } from '~/features/novel/stores/project'
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const novelStore = useNovelStore()
-const projectStore = useNovelProjectStore()
 
 const loading = shallowRef(true)
 const savingChapters = shallowRef(false)
@@ -63,8 +61,7 @@ watch(
 
     try {
       await Promise.all([
-        loadNovelWorkspaceContext(),
-        projectStore.markModuleEntered(id, 'content'),
+        loadNovelWorkspaceContext({ module: 'content' }),
       ])
 
       if (!active) {

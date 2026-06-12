@@ -7,6 +7,7 @@ import {
   useNovelWorkspaceContext,
   watchNovelWorkspaceContext,
 } from '~/features/novel/composables/useNovelWorkspaceContext'
+import { useNovelProjectStore } from '~/features/novel/stores/project'
 import { useNovelStore } from '~/features/novel/stores/novel'
 import type {
   ChapterRecord,
@@ -94,13 +95,16 @@ describe('useNovelWorkspaceContext', () => {
 
   it('loads the requested novel context through loadNovelIfNeeded', async () => {
     const novelStore = useNovelStore()
+    const projectStore = useNovelProjectStore()
     const novel = createNovel('novel-1')
     const loadNovelIfNeeded = vi.spyOn(novelStore, 'loadNovelIfNeeded').mockResolvedValue(novel)
+    const markModuleEntered = vi.spyOn(projectStore, 'markModuleEntered').mockResolvedValue()
     const loadNovel = vi.spyOn(novelStore, 'loadNovel')
 
-    await expect(loadNovelWorkspaceContext('novel-1')).resolves.toBe(novel)
+    await expect(loadNovelWorkspaceContext('novel-1', { module: 'overview' })).resolves.toBe(novel)
 
-    expect(loadNovelIfNeeded).toHaveBeenCalledWith('novel-1', {})
+    expect(loadNovelIfNeeded).toHaveBeenCalledWith('novel-1', { module: 'overview' })
+    expect(markModuleEntered).toHaveBeenCalledWith('novel-1', 'overview')
     expect(loadNovel).not.toHaveBeenCalled()
   })
 
@@ -134,25 +138,29 @@ describe('useNovelWorkspaceContext', () => {
 
   it('reruns the shared workspace loader when the requested novel id changes', async () => {
     const novelStore = useNovelStore()
+    const projectStore = useNovelProjectStore()
     const requestedNovelId = shallowRef('novel-1')
     const loadNovelIfNeeded = vi.spyOn(novelStore, 'loadNovelIfNeeded')
       .mockImplementation(async (id: string) => createNovel(id))
+    const markModuleEntered = vi.spyOn(projectStore, 'markModuleEntered').mockResolvedValue()
     const onLoaded = vi.fn()
 
     const context = watchNovelWorkspaceContext(
       computed(() => requestedNovelId.value),
-      { onLoaded },
+      { module: 'content', onLoaded },
     )
 
     await vi.waitFor(() => {
-      expect(loadNovelIfNeeded).toHaveBeenNthCalledWith(1, 'novel-1', {})
+      expect(loadNovelIfNeeded).toHaveBeenNthCalledWith(1, 'novel-1', { force: undefined, module: 'content' })
+      expect(markModuleEntered).toHaveBeenNthCalledWith(1, 'novel-1', 'content')
       expect(onLoaded).toHaveBeenNthCalledWith(1, 'novel-1')
     })
 
     requestedNovelId.value = 'novel-2'
 
     await vi.waitFor(() => {
-      expect(loadNovelIfNeeded).toHaveBeenNthCalledWith(2, 'novel-2', {})
+      expect(loadNovelIfNeeded).toHaveBeenNthCalledWith(2, 'novel-2', { force: undefined, module: 'content' })
+      expect(markModuleEntered).toHaveBeenNthCalledWith(2, 'novel-2', 'content')
       expect(onLoaded).toHaveBeenNthCalledWith(2, 'novel-2')
     })
 

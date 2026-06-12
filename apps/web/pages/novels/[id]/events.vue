@@ -4,7 +4,6 @@ import { useMessage } from 'naive-ui'
 import { useRoute, useRouter } from 'vue-router'
 import { useEventAnnotation } from '~/features/event/composables/useEventAnnotation'
 import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
-import { useNovelProjectStore } from '~/features/novel/stores/project'
 
 definePageMeta({
   layout: 'novel',
@@ -13,7 +12,6 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
-const projectStore = useNovelProjectStore()
 const loading = shallowRef(true)
 
 const novelId = computed(() => route.params.id as string)
@@ -101,7 +99,7 @@ watch(
     loading.value = true
 
     try {
-      await loadNovelWorkspaceContext()
+      await loadNovelWorkspaceContext({ module: 'events' })
 
       if (!active) {
         return
@@ -115,7 +113,6 @@ watch(
         return
       }
 
-      await projectStore.markModuleEntered(id, 'events')
     }
     catch (error) {
       if (active) {
@@ -198,3 +195,5 @@ watch(
   justify-content: center;
 }
 </style>
+
+

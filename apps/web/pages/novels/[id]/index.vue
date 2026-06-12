@@ -82,7 +82,7 @@ watch(
       await Promise.all([
         projectStore.loadProjects(),
         projectStore.loadProjectActivities(id),
-        loadNovelWorkspaceContext(),
+        loadNovelWorkspaceContext({ module: 'overview' }),
       ])
 
       if (!active) {
@@ -94,8 +94,6 @@ watch(
         void router.push('/novels')
         return
       }
-
-      await projectStore.markModuleEntered(id, 'overview')
     }
     catch {
       if (active) {
