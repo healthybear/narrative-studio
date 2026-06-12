@@ -13,6 +13,7 @@ export default defineConfig({
     alias: {
       '~': new URL('./', import.meta.url).pathname,
       '@': new URL('./', import.meta.url).pathname,
+      'vue-router': new URL('./tests/support/vue-router.ts', import.meta.url).pathname,
     },
   },
 })

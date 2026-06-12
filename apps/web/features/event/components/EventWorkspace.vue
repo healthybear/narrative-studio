@@ -60,6 +60,7 @@ function handleOverviewJump(payload: { sceneId: string, eventId: string }) {
     <EventOverviewPanel
       :stats="overviewStats"
       :items="overviewItems"
+      :event-type-options="eventTypeOptions"
       @jump-to-event="handleOverviewJump"
     />
 

@@ -24,24 +24,37 @@ interface EventOverviewItem {
 const props = defineProps<{
   stats: EventOverviewStats
   items: EventOverviewItem[]
+  eventTypeOptions: Array<{ label: string; value: string }>
 }>()
 
 const emit = defineEmits<{
   jumpToEvent: [payload: { sceneId: string, eventId: string }]
 }>()
 
+const eventTypeLabelByValue = computed<Record<string, string>>(() => {
+  return Object.fromEntries(
+    props.eventTypeOptions.map(option => [option.value, option.label])
+  )
+})
+
 const typeSummaries = computed(() => {
   return Object.entries(props.stats.typeCounts)
     .map(([type, count]) => ({
       key: type,
-      label: type === 'untyped' ? '未分类' : type,
+      label: getTypeLabel(type),
       count,
     }))
     .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label, 'zh-CN'))
 })
 
 function getTypeLabel(type: string) {
-  return type.trim() || '未分类'
+  const normalizedType = type.trim()
+
+  if (!normalizedType || normalizedType === 'untyped') {
+    return '未分类'
+  }
+
+  return eventTypeLabelByValue.value[normalizedType] ?? normalizedType
 }
 
 function getTitleLabel(title: string, order: number) {

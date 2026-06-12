@@ -85,6 +85,7 @@ describe('event overview panel', () => {
           typeCounts: {},
         },
         items: [],
+        eventTypeOptions: [],
       },
       global: {
         stubs,
@@ -94,6 +95,46 @@ describe('event overview panel', () => {
     expect(wrapper.text()).toContain('还没有可浏览的事件概览')
     expect(wrapper.text()).toContain('先为任一场景添加事件')
     expect(wrapper.text()).toContain('3 个场景尚未添加事件')
+  })
+
+  it('uses event type options to render overview labels without leaking internal keys', () => {
+    const wrapper = mount(EventOverviewPanel, {
+      props: {
+        stats: {
+          totalEventCount: 2,
+          populatedSceneCount: 1,
+          emptySceneCount: 0,
+          typeCounts: {
+            turning_point: 1,
+            untyped: 1,
+          },
+        },
+        items: [
+          {
+            eventId: 'event-1',
+            sceneId: 'scene-1',
+            chapterTitle: '第一章 雨夜',
+            sceneTitle: '场景 1',
+            order: 1,
+            type: 'turning_point',
+            title: '转折出现',
+            description: '局势逆转。',
+            source: 'manual',
+          },
+        ],
+        eventTypeOptions: [
+          { label: '转折', value: 'turning_point' },
+        ],
+      },
+      global: {
+        stubs,
+      },
+    })
+
+    expect(wrapper.text()).toContain('转折 1')
+    expect(wrapper.text()).toContain('未分类 1')
+    expect(wrapper.text()).toContain('转折')
+    expect(wrapper.text()).not.toContain('turning_point')
   })
 
   it('emits jumpToEvent with the scene and event ids when an overview item is clicked', async () => {
@@ -120,6 +161,9 @@ describe('event overview panel', () => {
             description: '主角第一次见到目标。',
             source: 'manual',
           },
+        ],
+        eventTypeOptions: [
+          { label: '动作', value: 'action' },
         ],
       },
       global: {
