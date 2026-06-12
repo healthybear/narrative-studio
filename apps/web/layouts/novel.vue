@@ -5,6 +5,7 @@ import type { MenuOption } from 'naive-ui'
 import {
   BarChartOutline,
   BookOutline,
+  DocumentTextOutline,
   EyeOutline,
   GitNetworkOutline,
   HappyOutline,
@@ -27,6 +28,7 @@ const currentNovel = computed(() => novelStore.currentNovel)
 const activeKey = computed(() => {
   const path = route.path
 
+  if (path.includes('/content')) return 'content'
   if (path.includes('/structure')) return 'structure'
   if (path.includes('/events')) return 'events'
   if (path.includes('/characters')) return 'characters'
@@ -34,10 +36,15 @@ const activeKey = computed(() => {
   if (path.includes('/perspective')) return 'perspective'
   if (path.includes('/analysis')) return 'analysis'
 
-  return 'structure'
+  return 'content'
 })
 
 const menuOptions = computed<MenuOption[]>(() => [
+  {
+    label: '章节内容',
+    key: 'content',
+    icon: () => h(NIcon, null, { default: () => h(DocumentTextOutline) }),
+  },
   {
     label: '结构标注',
     key: 'structure',
@@ -71,7 +78,7 @@ const menuOptions = computed<MenuOption[]>(() => [
 ])
 
 function handleMenuSelect(key: string) {
-  void router.push(`/novel/${novelId.value}/${key}`)
+  void router.push(`/novels/${novelId.value}/${key}`)
 }
 
 onMounted(async () => {
@@ -185,7 +192,7 @@ onMounted(async () => {
 .layout-sidebar {
   position: sticky;
   top: 64px;
-  width: 200px;
+  width: 220px;
   height: calc(100vh - 64px);
   padding: 16px 0;
   overflow-y: auto;
@@ -199,4 +206,3 @@ onMounted(async () => {
   overflow-y: auto;
 }
 </style>
-

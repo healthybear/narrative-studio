@@ -1,14 +1,16 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+﻿import { beforeEach, describe, expect, it } from 'vitest'
 import {
   closeDB,
   createNovelProject,
   deleteNovelProject,
   exportNovelProject,
   getDB,
+  getNovelProject,
   getNovelProjectBundle,
   initializeScenesFromChapters,
   listEventsByNovel,
   listEventsByScene,
+  listNovelProjectActivities,
   listScenesByChapter,
   resetDB,
   saveChapters,
@@ -80,8 +82,8 @@ describe('database schema and project crud', () => {
 
     const savedScenes = await saveScenes(project.id, chapters[0]!.id, [
       {
-        title: '场景 1',
-        content: '内容',
+        title: '鍦烘櫙 1',
+        content: '鍐呭',
         order: 1,
         startOffset: 0,
         endOffset: 2,
@@ -90,8 +92,8 @@ describe('database schema and project crud', () => {
         source: 'manual',
       },
       {
-        title: '场景 2',
-        content: '内容',
+        title: '鍦烘櫙 2',
+        content: '鍐呭',
         order: 2,
         startOffset: 2,
         endOffset: 4,
@@ -296,7 +298,7 @@ describe('database schema and project crud', () => {
     const { createNovelProjectMeta, listNovelProjectMetas, listTrashedNovelProjectMetas, moveNovelProjectToTrash, restoreNovelProject, permanentlyDeleteNovelProject, getNovelProjectMeta } = await import('~/utils/browser/db')
 
     const project = await createNovelProjectMeta({
-      title: '北城雨夜',
+      title: '鍖楀煄闆ㄥ',
       summary: '',
       logline: '',
       genre: '',
@@ -307,20 +309,27 @@ describe('database schema and project crud', () => {
     })
 
     expect(project.id).toBeTruthy()
-    expect(project.title).toBe('北城雨夜')
+    expect(project.title).toBe('鍖楀煄闆ㄥ')
+
+    const linkedNovel = await getNovelProject(project.id)
+    expect(linkedNovel.id).toBe(project.id)
+    expect(linkedNovel.title).toBe(project.title)
+
+    const activitiesAfterCreate = await listNovelProjectActivities(project.id)
+    expect(activitiesAfterCreate.map(item => item.type)).toContain('project_created')
     expect(project.status).toBe('active')
     expect(project.deletedAt).toBeNull()
 
-    // 软删除到回收站
+    // 杞垹闄ゅ埌鍥炴敹绔?
     await moveNovelProjectToTrash(project.id)
     expect((await listNovelProjectMetas()).map(item => item.id)).not.toContain(project.id)
     expect((await listTrashedNovelProjectMetas()).map(item => item.id)).toContain(project.id)
 
-    // 从回收站恢复
+    // 浠庡洖鏀剁珯鎭㈠
     await restoreNovelProject(project.id)
     expect((await listNovelProjectMetas()).map(item => item.id)).toContain(project.id)
 
-    // 彻底删除
+    // 褰诲簳鍒犻櫎
     await permanentlyDeleteNovelProject(project.id)
     await expect(getNovelProjectMeta(project.id)).rejects.toThrow()
   })

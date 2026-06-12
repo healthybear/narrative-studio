@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+﻿import { defineStore } from 'pinia'
 import type {
   NovelProjectActivity,
   NovelProjectMeta,
@@ -18,9 +18,6 @@ import {
   upsertNovelProjectStats,
 } from '~/utils/browser/db'
 
-/**
- * 创建项目输入类型
- */
 export interface CreateNovelProjectMetaInput {
   title: string
   summary: string
@@ -32,9 +29,6 @@ export interface CreateNovelProjectMetaInput {
   targetWordCount: number | null
 }
 
-/**
- * 更新项目输入类型
- */
 export interface UpdateNovelProjectMetaInput {
   title?: string
   summary?: string
@@ -47,109 +41,97 @@ export interface UpdateNovelProjectMetaInput {
   status?: NovelProjectMeta['status']
 }
 
-/**
- * 小说项目管理 Store
- * 负责项目的创建、编辑、归档、删除、恢复等管理操作
- */
+const MODULE_NAME_MAP: Record<NonNullable<NovelProjectStats['lastActiveModule']>, string> = {
+  overview: '项目总览',
+  content: '章节内容',
+  structure: '结构标注',
+  events: '事件工作台',
+  characters: '角色管理',
+  emotions: '情感分析',
+  perspective: '视角分析',
+  analysis: '分析结果',
+}
+
+async function loadStatsMap(projects: NovelProjectMeta[]) {
+  const entries = await Promise.all(
+    projects.map(async (project) => {
+      const stats = await getNovelProjectStats(project.id)
+      return [project.id, stats] as const
+    })
+  )
+
+  return Object.fromEntries(
+    entries.filter((entry): entry is readonly [string, NovelProjectStats] => Boolean(entry[1]))
+  ) as Record<string, NovelProjectStats>
+}
+
 export const useNovelProjectStore = defineStore('novel-project', {
   state: () => ({
-    /** 所有正常项目（未删除） */
     projects: [] as NovelProjectMeta[],
-    /** 回收站中的项目 */
     trashedProjects: [] as NovelProjectMeta[],
-    /** 项目统计数据映射 */
     statsById: {} as Record<string, NovelProjectStats>,
-    /** 项目活动记录映射 */
     activityById: {} as Record<string, NovelProjectActivity[]>,
-    /** 搜索关键词 */
     searchQuery: '',
-    /** 状态筛选 */
     statusFilter: 'all' as 'all' | 'draft' | 'active' | 'archived' | 'trash',
-    /** 加载状态 */
     loading: false,
-    /** 保存状态 */
     saving: false,
-    /** 最近错误信息 */
     lastError: '',
   }),
 
   getters: {
-    /**
-     * 根据搜索和筛选条件过滤项目
-     */
     filteredProjects(state): NovelProjectMeta[] {
-      let result = state.statusFilter === 'trash' ? state.trashedProjects : state.projects
+      const base = state.statusFilter === 'trash' ? state.trashedProjects : state.projects
+      let result = [...base]
 
-      // 状态筛选
       if (state.statusFilter !== 'all' && state.statusFilter !== 'trash') {
-        result = result.filter(p => p.status === state.statusFilter)
+        result = result.filter(project => project.status === state.statusFilter)
       }
 
-      // 搜索筛选
-      if (state.searchQuery.trim()) {
-        const query = state.searchQuery.toLowerCase()
-        result = result.filter(
-          p =>
-            p.title.toLowerCase().includes(query) ||
-            p.summary.toLowerCase().includes(query) ||
-            p.logline.toLowerCase().includes(query) ||
-            p.tags.some(tag => tag.toLowerCase().includes(query))
-        )
+      const query = state.searchQuery.trim().toLowerCase()
+      if (query) {
+        result = result.filter(project => {
+          return project.title.toLowerCase().includes(query)
+            || project.summary.toLowerCase().includes(query)
+            || project.logline.toLowerCase().includes(query)
+            || project.tags.some(tag => tag.toLowerCase().includes(query))
+        })
       }
 
-      return result
+      return result.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
     },
 
-    /**
-     * 获取最近打开的项目（按 lastOpenedAt 排序）
-     */
     recentProjects(state): NovelProjectMeta[] {
       return [...state.projects]
-        .filter(p => p.lastOpenedAt !== null)
-        .sort((a, b) => {
-          const timeA = a.lastOpenedAt || ''
-          const timeB = b.lastOpenedAt || ''
-          return timeB.localeCompare(timeA)
-        })
+        .filter(project => project.lastOpenedAt !== null)
+        .sort((left, right) => (right.lastOpenedAt || '').localeCompare(left.lastOpenedAt || ''))
         .slice(0, 5)
     },
 
-    /**
-     * 获取最活跃的项目（按 updatedAt 排序）
-     */
     activeProjects(state): NovelProjectMeta[] {
       return [...state.projects]
-        .filter(p => p.status === 'active')
-        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .filter(project => project.status === 'active')
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
         .slice(0, 10)
     },
   },
 
   actions: {
-    /**
-     * 加载所有项目
-     */
     async loadProjects() {
       this.loading = true
       this.lastError = ''
 
       try {
-        const [normal, trashed] = await Promise.all([
+        const [projects, trashedProjects] = await Promise.all([
           listNovelProjectMetas(),
           listTrashedNovelProjectMetas(),
         ])
 
-        this.projects = normal
-        this.trashedProjects = trashed
+        this.projects = [...projects].sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+        this.trashedProjects = [...trashedProjects].sort((left, right) => {
+          return (right.deletedAt || '').localeCompare(left.deletedAt || '')
+        })
 
-        // 加载统计数据
-        const allProjects = [...normal, ...trashed]
-        for (const project of allProjects) {
-          const stats = await getNovelProjectStats(project.id)
-          if (stats) {
-            this.statsById[project.id] = stats
-          }
-        }
+        this.statsById = await loadStatsMap([...this.projects, ...this.trashedProjects])
       }
       catch (error) {
         this.lastError = error instanceof Error ? error.message : '加载项目失败'
@@ -160,32 +142,24 @@ export const useNovelProjectStore = defineStore('novel-project', {
       }
     },
 
-    /**
-     * 加载项目活动记录
-     */
     async loadProjectActivities(novelId: string) {
       try {
-        const activities = await listNovelProjectActivities(novelId)
-        this.activityById[novelId] = activities
+        this.activityById[novelId] = await listNovelProjectActivities(novelId)
       }
       catch (error) {
-        this.lastError = error instanceof Error ? error.message : '加载活动记录失败'
+        this.lastError = error instanceof Error ? error.message : '加载项目活动失败'
         throw error
       }
     },
 
-    /**
-     * 创建新项目
-     */
     async createProject(input: CreateNovelProjectMetaInput) {
       this.saving = true
       this.lastError = ''
 
       try {
         const meta = await createNovelProjectMeta(input)
-        this.projects.push(meta)
+        this.projects.unshift(meta)
 
-        // 初始化统计数据
         const stats = await getNovelProjectStats(meta.id)
         if (stats) {
           this.statsById[meta.id] = stats
@@ -202,17 +176,14 @@ export const useNovelProjectStore = defineStore('novel-project', {
       }
     },
 
-    /**
-     * 更新项目信息
-     */
     async updateProject(id: string, updates: UpdateNovelProjectMetaInput) {
       this.saving = true
       this.lastError = ''
 
       try {
         const updated = await updateNovelProjectMeta(id, updates)
+        const index = this.projects.findIndex(project => project.id === id)
 
-        const index = this.projects.findIndex(p => p.id === id)
         if (index !== -1) {
           this.projects[index] = updated
         }
@@ -228,9 +199,6 @@ export const useNovelProjectStore = defineStore('novel-project', {
       }
     },
 
-    /**
-     * 归档项目
-     */
     async archiveProject(id: string) {
       await this.updateProject(id, { status: 'archived' })
       await recordNovelProjectActivity({
@@ -240,16 +208,10 @@ export const useNovelProjectStore = defineStore('novel-project', {
       })
     },
 
-    /**
-     * 取消归档项目
-     */
     async unarchiveProject(id: string) {
       await this.updateProject(id, { status: 'active' })
     },
 
-    /**
-     * 移动项目到回收站
-     */
     async moveToTrash(id: string) {
       this.saving = true
       this.lastError = ''
@@ -257,12 +219,12 @@ export const useNovelProjectStore = defineStore('novel-project', {
       try {
         await moveNovelProjectToTrash(id)
 
-        const index = this.projects.findIndex(p => p.id === id)
+        const index = this.projects.findIndex(project => project.id === id)
         if (index !== -1) {
           const [project] = this.projects.splice(index, 1)
           if (project) {
             project.deletedAt = new Date().toISOString()
-            this.trashedProjects.push(project)
+            this.trashedProjects.unshift(project)
           }
         }
       }
@@ -275,9 +237,6 @@ export const useNovelProjectStore = defineStore('novel-project', {
       }
     },
 
-    /**
-     * 从回收站恢复项目
-     */
     async restoreProject(id: string) {
       this.saving = true
       this.lastError = ''
@@ -285,12 +244,12 @@ export const useNovelProjectStore = defineStore('novel-project', {
       try {
         await restoreNovelProject(id)
 
-        const index = this.trashedProjects.findIndex(p => p.id === id)
+        const index = this.trashedProjects.findIndex(project => project.id === id)
         if (index !== -1) {
           const [project] = this.trashedProjects.splice(index, 1)
           if (project) {
             project.deletedAt = null
-            this.projects.push(project)
+            this.projects.unshift(project)
           }
         }
       }
@@ -303,22 +262,13 @@ export const useNovelProjectStore = defineStore('novel-project', {
       }
     },
 
-    /**
-     * 彻底删除项目
-     */
     async permanentlyDeleteProject(id: string) {
       this.saving = true
       this.lastError = ''
 
       try {
         await permanentlyDeleteNovelProject(id)
-
-        const trashedIndex = this.trashedProjects.findIndex(p => p.id === id)
-        if (trashedIndex !== -1) {
-          this.trashedProjects.splice(trashedIndex, 1)
-        }
-
-        // 删除统计和活动数据
+        this.trashedProjects = this.trashedProjects.filter(project => project.id !== id)
         this.statsById = Object.fromEntries(
           Object.entries(this.statsById).filter(([key]) => key !== id)
         )
@@ -327,7 +277,7 @@ export const useNovelProjectStore = defineStore('novel-project', {
         )
       }
       catch (error) {
-        this.lastError = error instanceof Error ? error.message : '彻底删除失败'
+        this.lastError = error instanceof Error ? error.message : '彻底删除项目失败'
         throw error
       }
       finally {
@@ -335,63 +285,61 @@ export const useNovelProjectStore = defineStore('novel-project', {
       }
     },
 
-    /**
-     * 标记模块已进入
-     */
     async markModuleEntered(novelId: string, module: NovelProjectStats['lastActiveModule']) {
+      if (!module) {
+        return
+      }
+
       try {
         const stats = await getNovelProjectStats(novelId)
         if (!stats) {
           return
         }
 
-        // 只有模块变化时才记录活动
         if (stats.lastActiveModule !== module) {
-          await recordNovelProjectActivity({
+          const activity = await recordNovelProjectActivity({
             novelId,
             type: 'module_entered',
             text: `进入${this.getModuleName(module)}`,
           })
+
+          if (this.activityById[novelId]) {
+            this.activityById[novelId] = [activity, ...this.activityById[novelId]]
+          }
         }
 
         const now = new Date().toISOString()
-        const updated: NovelProjectStats = {
+        const updatedStats: NovelProjectStats = {
           ...stats,
           lastActiveModule: module,
           updatedAt: now,
         }
 
-        await upsertNovelProjectStats(updated)
-        this.statsById[novelId] = updated
+        await upsertNovelProjectStats(updatedStats)
+        await updateNovelProjectMeta(
+          novelId,
+          { lastOpenedAt: now },
+          { recordActivity: false }
+        )
 
-        // 更新项目的 lastOpenedAt
-        await updateNovelProjectMeta(novelId, { lastOpenedAt: now })
+        this.statsById[novelId] = updatedStats
 
-        const projectIndex = this.projects.findIndex(p => p.id === novelId)
-        if (projectIndex !== -1 && this.projects[projectIndex]) {
-          this.projects[projectIndex]!.lastOpenedAt = now
+        const project = this.projects.find(item => item.id === novelId)
+        if (project) {
+          project.lastOpenedAt = now
         }
       }
       catch (error) {
-        this.lastError = error instanceof Error ? error.message : '标记模块失败'
-        // 不抛出错误，避免影响正常流程
+        this.lastError = error instanceof Error ? error.message : '记录模块访问失败'
       }
     },
 
-    /**
-     * 获取模块显示名称
-     */
     getModuleName(module: NovelProjectStats['lastActiveModule']): string {
-      const nameMap: Record<string, string> = {
-        overview: '项目总览',
-        content: '章节内容',
-        structure: '结构标注',
-        events: '事件工作台',
-        characters: '角色管理',
-        perspective: '视角分析',
-        analysis: '分析工作台',
+      if (!module) {
+        return MODULE_NAME_MAP.overview
       }
-      return nameMap[module || 'overview'] || '未知模块'
+
+      return MODULE_NAME_MAP[module] || '未知模块'
     },
   },
 })

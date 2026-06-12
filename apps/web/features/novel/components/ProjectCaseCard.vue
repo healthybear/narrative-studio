@@ -1,11 +1,7 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { NovelProjectMeta, NovelProjectStats } from '~/features/novel/types/novel'
 
-/**
- * 项目卡片组件 - 卷宗风格
- * 用于在项目列表页展示单个项目
- */
-defineProps<{
+const props = defineProps<{
   project: NovelProjectMeta
   stats?: NovelProjectStats
 }>()
@@ -17,154 +13,165 @@ const emit = defineEmits<{
   trash: [id: string]
 }>()
 
-/**
- * 格式化日期
- */
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return '未打开'
+
   const date = new Date(dateStr)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
+  const diff = Date.now() - date.getTime()
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
   if (days === 0) return '今天'
   if (days === 1) return '昨天'
   if (days < 7) return `${days} 天前`
+
   return date.toLocaleDateString('zh-CN')
 }
 
-/**
- * 获取状态显示文本
- */
 const getStatusText = (status: NovelProjectMeta['status']) => {
-  const statusMap = {
+  const statusMap: Record<NovelProjectMeta['status'], string> = {
     draft: '草稿',
     active: '进行中',
     archived: '已归档',
   }
-  return statusMap[status] || status
+
+  return statusMap[status]
 }
 
-/**
- * 获取状态颜色
- */
-const getStatusColor = (status: NovelProjectMeta['status']): 'default' | 'error' | 'info' | 'warning' | 'success' | 'primary' => {
-  const colorMap: Record<NovelProjectMeta['status'], 'default' | 'error' | 'info' | 'warning' | 'success' | 'primary'> = {
+const getStatusColor = (status: NovelProjectMeta['status']) => {
+  const colorMap: Record<NovelProjectMeta['status'], 'default' | 'success' | 'warning'> = {
     draft: 'default',
     active: 'success',
     archived: 'warning',
   }
+
   return colorMap[status]
 }
 </script>
 
 <template>
-  <div class="project-case-card" @click="emit('open', project.id)">
-    <!-- 卡片头部 -->
+  <article class="project-case-card" @click="emit('open', props.project.id)">
     <div class="case-card__header">
-      <h3 class="case-card__title">{{ project.title }}</h3>
-      <n-tag :type="getStatusColor(project.status)" size="small">
-        {{ getStatusText(project.status) }}
-      </n-tag>
+      <div class="case-card__title-group">
+        <h3 class="case-card__title">{{ props.project.title }}</h3>
+        <div class="case-card__tags-inline">
+          <n-tag :type="getStatusColor(props.project.status)" size="small">
+            {{ getStatusText(props.project.status) }}
+          </n-tag>
+          <n-tag v-if="props.project.deletedAt" type="error" size="small">
+            回收站
+          </n-tag>
+        </div>
+      </div>
+
+      <div class="case-card__actions" @click.stop>
+        <n-button text :title="props.project.deletedAt ? '恢复项目' : props.project.status === 'archived' ? '取消归档' : '归档项目'" @click="emit('archive', props.project.id)">
+          <template #icon>
+            <n-icon>
+              <component :is="props.project.deletedAt ? 'i-carbon-reset' : props.project.status === 'archived' ? 'i-carbon-rotate' : 'i-carbon-archive'" />
+            </n-icon>
+          </template>
+        </n-button>
+        <n-button text :title="props.project.deletedAt ? '彻底删除' : '移入回收站'" type="error" @click="emit('trash', props.project.id)">
+          <template #icon>
+            <n-icon>
+              <component :is="props.project.deletedAt ? 'i-carbon-delete' : 'i-carbon-trash-can'" />
+            </n-icon>
+          </template>
+        </n-button>
+        <n-button text title="编辑项目" @click="emit('edit', props.project.id)">
+          <template #icon>
+            <n-icon><i-carbon-edit /></n-icon>
+          </template>
+        </n-button>
+      </div>
     </div>
 
-    <!-- 一句话梗概 -->
-    <p v-if="project.logline" class="case-card__logline">
-      {{ project.logline }}
+    <p v-if="props.project.logline" class="case-card__logline">
+      {{ props.project.logline }}
+    </p>
+    <p v-else-if="props.project.summary" class="case-card__summary">
+      {{ props.project.summary }}
+    </p>
+    <p v-else class="case-card__summary case-card__summary--muted">
+      还没有填写项目简介。
     </p>
 
-    <!-- 项目元信息 -->
     <div class="case-card__meta">
-      <span v-if="project.genre" class="case-card__meta-item">
+      <span v-if="props.project.genre" class="case-card__meta-item">
         <n-icon><i-carbon-category /></n-icon>
-        {{ project.genre }}
+        {{ props.project.genre }}
       </span>
-      <span v-if="project.perspective" class="case-card__meta-item">
+      <span v-if="props.project.perspective" class="case-card__meta-item">
         <n-icon><i-carbon-view /></n-icon>
-        {{ project.perspective }}
+        {{ props.project.perspective }}
       </span>
-      <span v-if="project.era" class="case-card__meta-item">
+      <span v-if="props.project.era" class="case-card__meta-item">
         <n-icon><i-carbon-calendar /></n-icon>
-        {{ project.era }}
+        {{ props.project.era }}
       </span>
     </div>
 
-    <!-- 标签 -->
-    <div v-if="project.tags.length > 0" class="case-card__tags">
+    <div v-if="props.project.tags.length > 0" class="case-card__tag-list">
       <n-tag
-        v-for="tag in project.tags.slice(0, 3)"
+        v-for="tag in props.project.tags.slice(0, 4)"
         :key="tag"
         size="small"
         :bordered="false"
       >
         {{ tag }}
       </n-tag>
-      <span v-if="project.tags.length > 3" class="case-card__tags-more">
-        +{{ project.tags.length - 3 }}
+      <span v-if="props.project.tags.length > 4" class="case-card__tag-more">
+        +{{ props.project.tags.length - 4 }}
       </span>
     </div>
 
-    <!-- 统计信息 -->
-    <div v-if="stats" class="case-card__stats">
+    <div v-if="props.stats" class="case-card__stats">
       <div class="case-card__stat-item">
-        <span class="case-card__stat-value">{{ stats.chapterCount }}</span>
+        <span class="case-card__stat-value">{{ props.stats.chapterCount }}</span>
         <span class="case-card__stat-label">章节</span>
       </div>
       <div class="case-card__stat-item">
-        <span class="case-card__stat-value">{{ project.currentWordCount.toLocaleString() }}</span>
+        <span class="case-card__stat-value">{{ props.project.currentWordCount.toLocaleString() }}</span>
         <span class="case-card__stat-label">字数</span>
       </div>
       <div class="case-card__stat-item">
-        <span class="case-card__stat-value">{{ stats.eventCount }}</span>
+        <span class="case-card__stat-value">{{ props.stats.eventCount }}</span>
         <span class="case-card__stat-label">事件</span>
+      </div>
+      <div class="case-card__stat-item">
+        <span class="case-card__stat-value">{{ props.stats.characterCount }}</span>
+        <span class="case-card__stat-label">角色</span>
       </div>
     </div>
 
-    <!-- 最近活动 -->
-    <div v-if="stats" class="case-card__activity">
-      <n-icon><i-carbon-time /></n-icon>
-      <span>{{ stats.lastActivityText }}</span>
-      <span class="case-card__activity-time">{{ formatDate(project.lastOpenedAt) }}</span>
+    <div class="case-card__footer">
+      <div class="case-card__activity">
+        <n-icon><i-carbon-time /></n-icon>
+        <span>{{ props.stats?.lastActivityText || '还没有模块活动' }}</span>
+      </div>
+      <span class="case-card__time">最后打开 {{ formatDate(props.project.lastOpenedAt) }}</span>
     </div>
-
-    <!-- 操作按钮 -->
-    <div class="case-card__actions" @click.stop>
-      <n-button text @click="emit('edit', project.id)">
-        <template #icon>
-          <n-icon><i-carbon-edit /></n-icon>
-        </template>
-      </n-button>
-      <n-button
-        text
-        @click="emit('archive', project.id)"
-      >
-        <template #icon>
-          <n-icon><i-carbon-archive /></n-icon>
-        </template>
-      </n-button>
-      <n-button text type="error" @click="emit('trash', project.id)">
-        <template #icon>
-          <n-icon><i-carbon-trash-can /></n-icon>
-        </template>
-      </n-button>
-    </div>
-  </div>
+  </article>
 </template>
 
 <style scoped lang="scss">
 .project-case-card {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 260px;
   padding: 20px;
-  background: var(--n-color);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--n-color) 92%, #f59e0b 8%) 0%, var(--n-color) 100%);
   border: 1px solid var(--n-border-color);
-  border-radius: 8px;
+  border-radius: 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 
   &:hover {
-    border-color: var(--n-color-target);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--n-color-target) 70%, #f59e0b 30%);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
   }
 }
 
@@ -172,67 +179,80 @@ const getStatusColor = (status: NovelProjectMeta['status']): 'default' | 'error'
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 16px;
+}
+
+.case-card__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
 }
 
 .case-card__title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.4;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.35;
   color: var(--n-text-color);
 }
 
-.case-card__logline {
-  margin: 0 0 12px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--n-text-color-2);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.case-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.case-card__meta-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: var(--n-text-color-3);
-
-  .n-icon {
-    font-size: 14px;
-  }
-}
-
-.case-card__tags {
+.case-card__tags-inline {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 12px;
 }
 
-.case-card__tags-more {
+.case-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.case-card__logline,
+.case-card__summary {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--n-text-color-2);
+}
+
+.case-card__summary--muted {
+  color: var(--n-text-color-3);
+}
+
+.case-card__meta,
+.case-card__tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.case-card__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: color-mix(in srgb, var(--n-color-embedded) 88%, white 12%);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--n-text-color-2);
+}
+
+.case-card__tag-more {
+  display: inline-flex;
+  align-items: center;
   font-size: 12px;
   color: var(--n-text-color-3);
 }
 
 .case-card__stats {
-  display: flex;
-  gap: 24px;
-  padding: 12px 0;
-  border-top: 1px solid var(--n-divider-color);
-  border-bottom: 1px solid var(--n-divider-color);
-  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--n-color-embedded) 90%, white 10%);
+  border-radius: 14px;
 }
 
 .case-card__stat-item {
@@ -242,8 +262,8 @@ const getStatusColor = (status: NovelProjectMeta['status']): 'default' | 'error'
 }
 
 .case-card__stat-value {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--n-text-color);
 }
 
@@ -252,27 +272,30 @@ const getStatusColor = (status: NovelProjectMeta['status']): 'default' | 'error'
   color: var(--n-text-color-3);
 }
 
-.case-card__activity {
+.case-card__footer {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: auto;
+  font-size: 12px;
+  color: var(--n-text-color-3);
+}
+
+.case-card__activity {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: var(--n-text-color-3);
+}
 
-  .n-icon {
-    font-size: 14px;
+.case-card__time {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .case-card__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
-
-.case-card__activity-time {
-  margin-left: auto;
-  font-size: 12px;
-}
-
-.case-card__actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
 }
 </style>

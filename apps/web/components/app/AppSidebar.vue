@@ -2,6 +2,7 @@
 import { computed, h, type Component } from 'vue'
 import {
   BarChartOutline,
+  DocumentTextOutline,
   EyeOutline,
   FlashOutline,
   FolderOpenOutline,
@@ -27,14 +28,14 @@ const currentNovel = computed(() => novelStore.currentNovel)
 const activeKey = computed(() => {
   const path = route.path
 
-  if (path === '/' || path.startsWith('/novels')) return 'novels'
+  if (path.includes('/content')) return 'content'
   if (path.includes('/structure')) return 'structure'
   if (path.includes('/events')) return 'events'
   if (path.includes('/characters')) return 'characters'
   if (path.includes('/emotions')) return 'emotions'
   if (path.includes('/perspective')) return 'perspective'
   if (path.includes('/analysis')) return 'analysis'
-  if (path.includes('/library')) return 'library'
+  if (path === '/' || path === '/novels' || path === '/novels/') return 'novels'
 
   return 'novels'
 })
@@ -52,6 +53,12 @@ const menuOptions = computed<MenuOption[]>(() => [
   {
     type: 'divider',
     key: 'divider-1',
+  },
+  {
+    label: '章节内容',
+    key: 'content',
+    icon: renderIcon(DocumentTextOutline),
+    disabled: !currentNovel.value,
   },
   {
     label: '结构标注',
@@ -111,23 +118,16 @@ function handleMenuSelect(key: string) {
     case 'novels':
       void router.push('/novels')
       break
+    case 'content':
     case 'structure':
-      if (currentNovelId) void router.push(`/novel/${currentNovelId}/structure`)
-      break
     case 'events':
-      if (currentNovelId) void router.push(`/novel/${currentNovelId}/events`)
-      break
     case 'characters':
-      if (currentNovelId) void router.push(`/novel/${currentNovelId}/characters`)
-      break
     case 'emotions':
-      if (currentNovelId) void router.push(`/novel/${currentNovelId}/emotions`)
-      break
     case 'perspective':
-      if (currentNovelId) void router.push(`/novel/${currentNovelId}/perspective`)
-      break
     case 'analysis':
-      if (currentNovelId) void router.push(`/novel/${currentNovelId}/analysis`)
+      if (currentNovelId) {
+        void router.push(`/novels/${currentNovelId}/${key}`)
+      }
       break
     case 'library':
       void router.push('/library')
@@ -182,4 +182,3 @@ function handleMenuSelect(key: string) {
   height: 100%;
 }
 </style>
-

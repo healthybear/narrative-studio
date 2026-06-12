@@ -40,7 +40,7 @@ export interface NovelProjectStats {
   eventCount: number
   characterCount: number
   pendingEventCount: number
-  lastActiveModule: 'overview' | 'content' | 'structure' | 'events' | 'characters' | 'perspective' | 'analysis' | null
+  lastActiveModule: 'overview' | 'content' | 'structure' | 'events' | 'characters' | 'emotions' | 'perspective' | 'analysis' | null
   lastActivityText: string
   updatedAt: string
 }

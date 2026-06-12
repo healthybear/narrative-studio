@@ -1,25 +1,18 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
-import { reactive, ref, toRefs, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import type { NovelProjectMeta } from '~/features/novel/types/novel'
 
-/**
- * 项目表单抽屉组件
- * 用于创建和编辑项目
- */
-const { show, project } = toRefs(defineProps<{
+const props = defineProps<{
   show: boolean
   project?: NovelProjectMeta | null
-}>())
+}>()
 
 const emit = defineEmits<{
   'update:show': [value: boolean]
   submit: [data: FormData]
 }>()
 
-/**
- * 表单数据类型
- */
 export interface FormData {
   title: string
   summary: string
@@ -34,9 +27,6 @@ export interface FormData {
 const formRef = ref<FormInst | null>(null)
 const loading = ref(false)
 
-/**
- * 表单数据
- */
 const formValue = reactive<FormData>({
   title: '',
   summary: '',
@@ -48,9 +38,6 @@ const formValue = reactive<FormData>({
   targetWordCount: null,
 })
 
-/**
- * 表单验证规则
- */
 const rules: FormRules = {
   title: {
     required: true,
@@ -59,7 +46,10 @@ const rules: FormRules = {
   },
   targetWordCount: {
     validator: (_rule: unknown, value: number | null) => {
-      if (value === null || value === undefined) return true
+      if (value === null || value === undefined) {
+        return true
+      }
+
       return value > 0
     },
     message: '目标字数必须大于 0',
@@ -67,89 +57,55 @@ const rules: FormRules = {
   },
 }
 
-/**
- * 监听项目变化，同步表单数据
- */
+function hydrateForm(project?: NovelProjectMeta | null) {
+  formValue.title = project?.title || ''
+  formValue.summary = project?.summary || ''
+  formValue.logline = project?.logline || ''
+  formValue.genre = project?.genre || ''
+  formValue.perspective = project?.perspective || ''
+  formValue.era = project?.era || ''
+  formValue.tagsText = project?.tags.join(', ') || ''
+  formValue.targetWordCount = project?.targetWordCount ?? null
+}
+
 watch(
-  project,
-  (proj) => {
-    if (proj) {
-      formValue.title = proj.title
-      formValue.summary = proj.summary
-      formValue.logline = proj.logline
-      formValue.genre = proj.genre
-      formValue.perspective = proj.perspective
-      formValue.era = proj.era
-      formValue.tagsText = proj.tags.join(', ')
-      formValue.targetWordCount = proj.targetWordCount
+  () => [props.show, props.project] as const,
+  ([show, project]) => {
+    if (show) {
+      hydrateForm(project)
+      return
     }
+
+    hydrateForm(null)
+    formRef.value?.restoreValidation()
   },
   { immediate: true }
 )
 
-/**
- * 监听显示状态，重置表单
- */
-watch(
-  show,
-  (isShow) => {
-    if (!isShow) {
-      resetForm()
-    }
-  }
-)
-
-/**
- * 重置表单
- */
-const resetForm = () => {
-  if (!project.value) {
-    formValue.title = ''
-    formValue.summary = ''
-    formValue.logline = ''
-    formValue.genre = ''
-    formValue.perspective = ''
-    formValue.era = ''
-    formValue.tagsText = ''
-    formValue.targetWordCount = null
-  }
-}
-
-/**
- * 处理提交
- */
 const handleSubmit = async () => {
   try {
     await formRef.value?.validate()
     loading.value = true
 
     emit('submit', { ...formValue })
-    emit('update:show', false)
   }
   catch (error) {
-    console.error('表单验证失败:', error)
+    console.error('表单校验失败:', error)
   }
   finally {
     loading.value = false
   }
 }
-
-/**
- * 处理取消
- */
-const handleCancel = () => {
-  emit('update:show', false)
-}
 </script>
 
 <template>
   <n-drawer
-    :show="show"
+    :show="props.show"
     :width="600"
     placement="right"
     @update:show="emit('update:show', $event)"
   >
-    <n-drawer-content :title="project ? '编辑项目' : '新建项目'" closable>
+    <n-drawer-content :title="props.project ? '编辑项目' : '新建项目'" closable>
       <n-form
         ref="formRef"
         :model="formValue"
@@ -157,88 +113,98 @@ const handleCancel = () => {
         label-placement="top"
         require-mark-placement="right-hanging"
       >
-        <!-- 项目标题 -->
         <n-form-item label="项目标题" path="title">
           <n-input
             v-model:value="formValue.title"
-            placeholder="请输入项目标题"
+            placeholder="例如：北城雨夜"
           />
         </n-form-item>
 
-        <!-- 一句话梗概 -->
         <n-form-item label="一句话梗概" path="logline">
           <n-input
             v-model:value="formValue.logline"
-            placeholder="用一句话概括你的故事"
+            placeholder="用一句话说明这个故事最核心的冲突"
             type="textarea"
             :autosize="{ minRows: 2, maxRows: 3 }"
           />
         </n-form-item>
 
-        <!-- 项目简介 -->
         <n-form-item label="项目简介" path="summary">
           <n-input
             v-model:value="formValue.summary"
-            placeholder="详细描述你的项目"
+            placeholder="补充世界观、故事方向、主要人物关系等"
             type="textarea"
-            :autosize="{ minRows: 3, maxRows: 5 }"
+            :autosize="{ minRows: 4, maxRows: 6 }"
           />
         </n-form-item>
 
-        <!-- 题材 -->
-        <n-form-item label="题材" path="genre">
-          <n-input
-            v-model:value="formValue.genre"
-            placeholder="如：都市悬疑、武侠奇幻"
-          />
-        </n-form-item>
+        <n-grid :cols="2" :x-gap="16" responsive="screen">
+          <n-gi>
+            <n-form-item label="题材" path="genre">
+              <n-input
+                v-model:value="formValue.genre"
+                placeholder="例如：都市悬疑"
+              />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
+            <n-form-item label="叙事视角" path="perspective">
+              <n-input
+                v-model:value="formValue.perspective"
+                placeholder="例如：第一人称"
+              />
+            </n-form-item>
+          </n-gi>
+        </n-grid>
 
-        <!-- 视角 -->
-        <n-form-item label="视角" path="perspective">
-          <n-input
-            v-model:value="formValue.perspective"
-            placeholder="如：第一人称、第三人称全知"
-          />
-        </n-form-item>
+        <n-grid :cols="2" :x-gap="16" responsive="screen">
+          <n-gi>
+            <n-form-item label="时代背景" path="era">
+              <n-input
+                v-model:value="formValue.era"
+                placeholder="例如：近未来东亚都市"
+              />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
+            <n-form-item label="目标字数" path="targetWordCount">
+              <n-input-number
+                v-model:value="formValue.targetWordCount"
+                placeholder="例如：120000"
+                :min="1"
+                :step="10000"
+                style="width: 100%"
+              />
+            </n-form-item>
+          </n-gi>
+        </n-grid>
 
-        <!-- 时代背景 -->
-        <n-form-item label="时代背景" path="era">
-          <n-input
-            v-model:value="formValue.era"
-            placeholder="如：现代都市、民国时期"
-          />
-        </n-form-item>
-
-        <!-- 标签 -->
         <n-form-item label="标签" path="tagsText">
           <n-input
             v-model:value="formValue.tagsText"
-            placeholder="用逗号分隔多个标签，如：悬疑, 连载, 长篇"
-          />
-        </n-form-item>
-
-        <!-- 目标字数 -->
-        <n-form-item label="目标字数" path="targetWordCount">
-          <n-input-number
-            v-model:value="formValue.targetWordCount"
-            placeholder="如：200000"
-            :min="1"
-            :step="10000"
-            style="width: 100%"
+            placeholder="使用英文逗号分隔，例如：悬疑, 连载, 长篇"
           />
         </n-form-item>
       </n-form>
 
       <template #footer>
-        <div style="display: flex; justify-content: flex-end; gap: 12px;">
-          <n-button @click="handleCancel">
+        <div class="drawer-footer">
+          <n-button @click="emit('update:show', false)">
             取消
           </n-button>
           <n-button type="primary" :loading="loading" @click="handleSubmit">
-            {{ project ? '保存' : '创建' }}
+            {{ props.project ? '保存修改' : '创建项目' }}
           </n-button>
         </div>
       </template>
     </n-drawer-content>
   </n-drawer>
 </template>
+
+<style scoped>
+.drawer-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+</style>

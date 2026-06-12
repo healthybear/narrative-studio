@@ -1,22 +1,14 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { NovelProjectActivity } from '~/features/novel/types/novel'
 
-/**
- * 项目活动时间线组件
- * 展示项目的历史活动记录
- */
-defineProps<{
+const props = defineProps<{
   items: NovelProjectActivity[]
   emptyText?: string
 }>()
 
-/**
- * 格式化时间
- */
 const formatTime = (dateStr: string) => {
   const date = new Date(dateStr)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
+  const diff = Date.now() - date.getTime()
   const minutes = Math.floor(diff / (1000 * 60))
   const hours = Math.floor(diff / (1000 * 60 * 60))
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
@@ -35,9 +27,6 @@ const formatTime = (dateStr: string) => {
   })
 }
 
-/**
- * 获取活动类型图标
- */
 const getActivityIcon = (type: NovelProjectActivity['type']) => {
   const iconMap: Record<NovelProjectActivity['type'], string> = {
     project_created: 'i-carbon-add',
@@ -50,20 +39,21 @@ const getActivityIcon = (type: NovelProjectActivity['type']) => {
     project_restored: 'i-carbon-reset',
     project_deleted: 'i-carbon-trash-can',
   }
+
   return iconMap[type] || 'i-carbon-dot-mark'
 }
 </script>
 
 <template>
   <div class="project-activity-feed">
-    <div v-if="items.length === 0" class="activity-feed__empty">
+    <div v-if="props.items.length === 0" class="activity-feed__empty">
       <n-icon size="48"><i-carbon-data-vis-4 /></n-icon>
-      <p>{{ emptyText || '还没有活动记录' }}</p>
+      <p>{{ props.emptyText || '还没有活动记录' }}</p>
     </div>
 
     <n-timeline v-else>
       <n-timeline-item
-        v-for="activity in items"
+        v-for="activity in props.items"
         :key="activity.id"
         :type="activity.type === 'project_deleted' ? 'error' : 'default'"
       >
@@ -72,12 +62,8 @@ const getActivityIcon = (type: NovelProjectActivity['type']) => {
         </template>
 
         <div class="activity-feed__item">
-          <div class="activity-feed__text">
-            {{ activity.text }}
-          </div>
-          <div class="activity-feed__time">
-            {{ formatTime(activity.createdAt) }}
-          </div>
+          <div class="activity-feed__text">{{ activity.text }}</div>
+          <div class="activity-feed__time">{{ formatTime(activity.createdAt) }}</div>
         </div>
       </n-timeline-item>
     </n-timeline>
@@ -86,7 +72,7 @@ const getActivityIcon = (type: NovelProjectActivity['type']) => {
 
 <style scoped lang="scss">
 .project-activity-feed {
-  padding: 16px 0;
+  padding: 8px 0;
 }
 
 .activity-feed__empty {

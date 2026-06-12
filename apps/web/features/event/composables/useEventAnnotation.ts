@@ -15,14 +15,23 @@ export function useEventAnnotation(novelId: string) {
   const eventDrafts = ref<EventDraft[]>([])
 
   const novel = computed(() => novelStore.currentNovel)
+  const chapterOrderById = computed<Record<string, number>>(() => {
+    return Object.fromEntries(
+      novelStore.currentChapters.map(chapter => [chapter.id, chapter.order])
+    )
+  })
   const scenes = computed(() =>
     novelStore.currentScenes
       .slice()
       .sort((left, right) => {
-        if (left.chapterId === right.chapterId) {
+        const leftChapterOrder = chapterOrderById.value[left.chapterId] ?? Number.MAX_SAFE_INTEGER
+        const rightChapterOrder = chapterOrderById.value[right.chapterId] ?? Number.MAX_SAFE_INTEGER
+
+        if (leftChapterOrder === rightChapterOrder) {
           return left.order - right.order
         }
-        return left.chapterId.localeCompare(right.chapterId)
+
+        return leftChapterOrder - rightChapterOrder
       })
   )
   const selectedScene = computed(() =>
@@ -36,6 +45,24 @@ export function useEventAnnotation(novelId: string) {
   const selectedEvent = computed(() =>
     selectedSceneEvents.value.find(event => event.id === selectedEventId.value) ?? null
   )
+  const chapterTitleById = computed<Record<string, string>>(() => {
+    return Object.fromEntries(
+      novelStore.currentChapters.map(chapter => [chapter.id, chapter.title])
+    )
+  })
+  const eventCounts = computed<Record<string, number>>(() => {
+    return Object.fromEntries(
+      scenes.value.map(scene => [scene.id, getEventCount(scene.id)])
+    )
+  })
+  const totalEventCount = computed(() => eventDrafts.value.length)
+  const currentChapterTitle = computed(() => {
+    if (!selectedScene.value) {
+      return ''
+    }
+
+    return chapterTitleById.value[selectedScene.value.chapterId] ?? ''
+  })
 
   function syncEventDrafts() {
     eventDrafts.value = toEventDrafts(novelStore.currentEvents)
@@ -132,6 +159,10 @@ export function useEventAnnotation(novelId: string) {
     novel,
     novelStore,
     scenes,
+    chapterTitleById,
+    eventCounts,
+    totalEventCount,
+    currentChapterTitle,
     selectedSceneId,
     selectedScene,
     selectedSceneEvents,

@@ -259,12 +259,30 @@ export const useNovelStore = defineStore('novel', {
         const records = await saveScenes(novelId, chapterId, scenes)
         const validSceneIds = new Set(records.map(scene => scene.id))
         const remaining = this.currentScenes.filter(scene => scene.chapterId !== chapterId)
-        this.currentScenes = [...remaining, ...records].sort((left, right) => {
-          if (left.chapterId === right.chapterId) {
-            return left.order - right.order
+
+        // 合并场景并按章节顺序排序
+        const allScenes = [...remaining, ...records]
+        const chapterOrderMap = new Map<string, number>()
+
+        // 构建章节顺序映射
+        if (this.currentNovel) {
+          const chapters = await listChaptersByNovel(this.currentNovel.id)
+          chapters.forEach(chapter => {
+            chapterOrderMap.set(chapter.id, chapter.order)
+          })
+        }
+
+        this.currentScenes = allScenes.sort((left, right) => {
+          const leftChapterOrder = chapterOrderMap.get(left.chapterId) ?? Number.MAX_SAFE_INTEGER
+          const rightChapterOrder = chapterOrderMap.get(right.chapterId) ?? Number.MAX_SAFE_INTEGER
+
+          if (leftChapterOrder !== rightChapterOrder) {
+            return leftChapterOrder - rightChapterOrder
           }
-          return left.chapterId.localeCompare(right.chapterId)
+
+          return left.order - right.order
         })
+
         this.currentEvents = this.currentEvents.filter(event =>
           !previousChapterSceneIds.has(event.sceneId) || validSceneIds.has(event.sceneId)
         )
