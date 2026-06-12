@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { computed, defineComponent, h, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import EventsPage from '~/pages/novels/[id]/events.vue'
 
 const warningMock = vi.fn()
 const errorMock = vi.fn()
@@ -132,8 +133,6 @@ vi.mock('~/features/novel/composables/useNovelWorkspaceContext', () => ({
     }
   },
 }))
-
-import EventsPage from '~/pages/novels/[id]/events.vue'
 
 const stubs = {
   NPageHeader: defineComponent({

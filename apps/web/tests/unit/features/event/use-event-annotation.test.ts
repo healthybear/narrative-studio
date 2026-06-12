@@ -69,10 +69,14 @@ function createTestChapters(): ChapterRecord[] {
       id: 'chapter-1',
       novelId: 'novel-1',
       title: 'Chapter 1',
-      summary: '',
+      content: 'Chapter 1 content',
       order: 0,
+      startOffset: 0,
+      endOffset: 300,
+      wordCount: 300,
       createdAt: '2026-06-12T00:00:00.000Z',
       updatedAt: '2026-06-12T00:00:00.000Z',
+      isManuallyAdjusted: false,
     },
   ]
 }

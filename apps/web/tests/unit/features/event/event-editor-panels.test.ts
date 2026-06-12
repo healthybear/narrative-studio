@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
+import type { PropType } from 'vue'
 import { describe, expect, it } from 'vitest'
 import EventDetailPanel from '~/features/event/components/EventDetailPanel.vue'
 import EventListPanel from '~/features/event/components/EventListPanel.vue'
@@ -134,7 +135,7 @@ const stubs = {
         default: '',
       },
       options: {
-        type: Array,
+        type: Array as PropType<Array<{ label: string }>>,
         default: () => [],
       },
     },
