@@ -10,6 +10,19 @@ import {
   toEventDrafts,
 } from '~/features/event/utils/event-annotation'
 
+interface EventOverviewItem {
+  eventId: string
+  sceneId: string
+  chapterId: string
+  chapterTitle: string
+  sceneTitle: string
+  order: number
+  type: string
+  title: string
+  description: string
+  source: EventDraft['source']
+}
+
 export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
   const novelStore = useNovelStore()
   const {
@@ -47,9 +60,7 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
     scenes.value.find(scene => scene.id === selectedSceneId.value) ?? null
   )
   const selectedSceneEvents = computed(() =>
-    normalizeEventDrafts(
-      activeEventDrafts.value.filter(event => event.sceneId === selectedSceneId.value)
-    )
+    getSceneDrafts(selectedSceneId.value)
   )
   const selectedEvent = computed(() =>
     selectedSceneEvents.value.find(event => event.id === selectedEventId.value) ?? null
@@ -65,6 +76,49 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
     )
   })
   const totalEventCount = computed(() => activeEventDrafts.value.length)
+  const sceneById = computed(() => {
+    return new Map(scenes.value.map(scene => [scene.id, scene] as const))
+  })
+  const allEventItems = computed<EventOverviewItem[]>(() => {
+    return normalizeEventDrafts(activeEventDrafts.value)
+      .filter(event => sceneById.value.has(event.sceneId))
+      .map(event => {
+        const scene = sceneById.value.get(event.sceneId)!
+
+        return {
+          eventId: event.id,
+          sceneId: scene.id,
+          chapterId: scene.chapterId,
+          chapterTitle: chapterTitleById.value[scene.chapterId] ?? '',
+          sceneTitle: scene.title,
+          order: event.order,
+          type: event.type,
+          title: event.title,
+          description: event.description ?? '',
+          source: event.source,
+        }
+      })
+  })
+  const overviewStats = computed(() => {
+    const typeCounts: Record<string, number> = {}
+
+    for (const item of allEventItems.value) {
+      if (!item.type) {
+        continue
+      }
+
+      typeCounts[item.type] = (typeCounts[item.type] ?? 0) + 1
+    }
+
+    const populatedSceneIds = new Set(allEventItems.value.map(item => item.sceneId))
+
+    return {
+      totalEventCount: allEventItems.value.length,
+      populatedSceneCount: populatedSceneIds.size,
+      emptySceneCount: scenes.value.length - populatedSceneIds.size,
+      typeCounts,
+    }
+  })
   const currentChapterTitle = computed(() => {
     if (!selectedScene.value) {
       return ''
@@ -72,11 +126,28 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
 
     return chapterTitleById.value[selectedScene.value.chapterId] ?? ''
   })
+  const hasUnsavedChanges = computed(() => {
+    if (!selectedSceneId.value) {
+      return false
+    }
+
+    const persistedSceneEvents = normalizeEventDrafts(
+      toEventDrafts(events.value.filter(event => event.sceneId === selectedSceneId.value))
+    )
+
+    return JSON.stringify(selectedSceneEvents.value) !== JSON.stringify(persistedSceneEvents)
+  })
 
   function syncEventDrafts() {
     eventDrafts.value = hasActiveContext.value
       ? toEventDrafts(events.value)
       : []
+  }
+
+  function getSceneDrafts(sceneId: string) {
+    return normalizeEventDrafts(
+      activeEventDrafts.value.filter(event => event.sceneId === sceneId)
+    )
   }
 
   function getEventCount(sceneId: string) {
@@ -105,6 +176,21 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
     selectedEventId.value = eventId
   }
 
+  function jumpToEvent(sceneId: string, eventId: string) {
+    if (!sceneById.value.has(sceneId)) {
+      return false
+    }
+
+    const targetEvent = getSceneDrafts(sceneId).find(event => event.id === eventId)
+    if (!targetEvent) {
+      return false
+    }
+
+    selectScene(sceneId)
+    selectEvent(targetEvent.id)
+    return true
+  }
+
   function updateEventField(
     eventId: string,
     field: 'title' | 'type' | 'description',
@@ -130,11 +216,18 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
   }
 
   function removeEvent(eventId: string) {
+    const previousSceneEvents = selectedSceneEvents.value
+    const removedIndex = previousSceneEvents.findIndex(event => event.id === eventId)
+
     eventDrafts.value = removeEventDraft(eventDrafts.value, eventId)
 
     const currentEvents = selectedSceneEvents.value
     if (selectedEventId.value === eventId) {
-      selectedEventId.value = currentEvents[0]?.id ?? ''
+      // Keep selection in the same scene when possible by preferring the next item
+      // at the removed index, then the previous item, then the empty state.
+      selectedEventId.value = currentEvents[removedIndex]?.id
+        ?? currentEvents[removedIndex - 1]?.id
+        ?? ''
     }
   }
 
@@ -180,7 +273,10 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
     chapterTitleById,
     eventCounts,
     totalEventCount,
+    allEventItems,
+    overviewStats,
     currentChapterTitle,
+    hasUnsavedChanges,
     selectedSceneId,
     selectedScene,
     selectedSceneEvents,
@@ -189,6 +285,7 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
     loadContext,
     selectScene,
     selectEvent,
+    jumpToEvent,
     addEvent,
     removeEvent,
     updateEventField,
