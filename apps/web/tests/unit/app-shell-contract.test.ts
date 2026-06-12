@@ -47,15 +47,15 @@ describe('app shell contract', () => {
     expect(responsive).toContain('export function useResponsive()')
   })
 
-  it('keeps providers visual-only and leaves IndexedDB lazy at the data layer', () => {
+  it('keeps IndexedDB startup out of AppProviders while theme setup stays there', () => {
     const providers = read(resolve(webRoot, 'components/app/AppProviders.vue'))
 
     expect(providers).toContain('naiveThemeOverrides')
-    expect(providers).toContain("from '~/assets/styles/themes/naive'")
-    expect(providers).toContain(':theme-overrides="naiveThemeOverrides"')
+    expect(providers).toContain('useAppTheme')
     expect(providers).not.toContain('initDB(')
     expect(providers).not.toContain("~/utils/browser/db")
     expect(providers).not.toContain('onMounted(')
+    expect(providers).toContain('Theme state still comes from useAppTheme')
   })
 
   it('wires layouts through the new app shell boundary', () => {

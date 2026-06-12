@@ -12,24 +12,33 @@ const read = (path: string) => readFileSync(path, 'utf8')
 describe('app performance contract', () => {
   it('limits Nuxt component scanning to the app shell boundary', () => {
     const nuxtConfig = read(resolve(webRoot, 'nuxt.config.ts'))
+    const componentsBlock = nuxtConfig.match(/components:\s*\[([\s\S]*?)\]\s*,\s*\n\s*typescript:/)
 
-    expect(nuxtConfig).toContain("path: '~/components/app'")
-    expect(nuxtConfig).not.toContain("path: '~/features'")
+    expect(componentsBlock).toBeTruthy()
+
+    const componentPaths = [...(componentsBlock?.[1] ?? '').matchAll(/path:\s*'([^']+)'/g)].map(match => match[1])
+
+    expect(componentPaths).toEqual(['~/components/app'])
   })
 
   it('keeps IndexedDB initialization out of global providers', () => {
     const providers = read(resolve(webRoot, 'components/app/AppProviders.vue'))
+    const scriptBlock = providers.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)
 
-    expect(providers).not.toContain('initDB(')
-    expect(providers).not.toContain('onMounted(')
-    expect(providers).not.toContain("~/utils/browser/db")
+    expect(scriptBlock?.[1]).not.toContain('initDB')
+    expect(scriptBlock?.[1]).not.toContain('onMounted')
+    expect(scriptBlock?.[1]).not.toContain('~/utils/browser/db')
   })
 
   it('uses explicit imports inside feature workspaces when auto-registration is disabled', () => {
     const eventWorkspace = read(resolve(webRoot, 'features/event/components/EventWorkspace.vue'))
+    const importLines = eventWorkspace
+      .split('\n')
+      .filter(line => line.startsWith('import Event'))
 
-    expect(eventWorkspace).toContain("import EventSceneList from '~/features/event/components/EventSceneList.vue'")
-    expect(eventWorkspace).toContain("import EventListPanel from '~/features/event/components/EventListPanel.vue'")
-    expect(eventWorkspace).toContain("import EventDetailPanel from '~/features/event/components/EventDetailPanel.vue'")
+    expect(importLines).toHaveLength(3)
+    expect(importLines.join('\n')).toContain("EventSceneList from '~/features/event/components/EventSceneList.vue'")
+    expect(importLines.join('\n')).toContain("EventListPanel from '~/features/event/components/EventListPanel.vue'")
+    expect(importLines.join('\n')).toContain("EventDetailPanel from '~/features/event/components/EventDetailPanel.vue'")
   })
 })
