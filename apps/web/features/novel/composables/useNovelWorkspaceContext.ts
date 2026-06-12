@@ -44,6 +44,8 @@ export function useNovelWorkspaceContext(novelId: MaybeRefOrGetter<string>) {
     novel: computed(() => (hasActiveContext.value ? novelStore.currentNovel : null)),
     chapters: computed(() => (hasActiveContext.value ? novelStore.currentChapters : [])),
     scenes: computed(() => (hasActiveContext.value ? novelStore.currentScenes : [])),
+    characters: computed(() => (hasActiveContext.value ? novelStore.currentCharacters : [])),
+    characterRelations: computed(() => (hasActiveContext.value ? novelStore.currentCharacterRelations : [])),
     events: computed(() => (hasActiveContext.value ? novelStore.currentEvents : [])),
     loadNovelWorkspaceContext: load,
   }

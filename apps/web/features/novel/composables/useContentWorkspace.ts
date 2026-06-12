@@ -87,6 +87,28 @@ export function useContentWorkspace(options: ContentWorkspaceOptions) {
   const selectedChapter = computed(() => {
     return chapterDrafts.value.find(chapter => chapter.id === selectedChapterId.value) || null
   })
+  const currentChapterScenes = computed(() => {
+    if (!selectedChapterId.value) {
+      return []
+    }
+
+    return ensureSceneDrafts(selectedChapterId.value)
+  })
+  const currentChapterAppearanceCountByCharacterId = computed<Record<string, number>>(() => {
+    return currentChapterScenes.value.reduce<Record<string, number>>((acc, scene) => {
+      for (const characterId of scene.characterIds) {
+        acc[characterId] = (acc[characterId] ?? 0) + 1
+      }
+
+      return acc
+    }, {})
+  })
+  const currentChapterLinkedCharacterCount = computed(() =>
+    Object.keys(currentChapterAppearanceCountByCharacterId.value).length
+  )
+  const currentChapterTotalAppearanceCount = computed(() =>
+    Object.values(currentChapterAppearanceCountByCharacterId.value).reduce((sum, count) => sum + count, 0)
+  )
 
   function setSourceText(next: string) {
     sourceTextDraft.value = next
@@ -226,6 +248,10 @@ export function useContentWorkspace(options: ContentWorkspaceOptions) {
     chapterDrafts,
     selectedChapterId,
     selectedChapter,
+    currentChapterScenes,
+    currentChapterAppearanceCountByCharacterId,
+    currentChapterLinkedCharacterCount,
+    currentChapterTotalAppearanceCount,
     sceneDraftsByChapterId,
     setSourceText,
     selectChapter,

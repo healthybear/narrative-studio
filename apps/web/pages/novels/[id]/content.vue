@@ -1,6 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed, shallowRef } from 'vue'
 import { useMessage } from 'naive-ui'
+import type { SelectOption } from 'naive-ui'
 import ContentWorkspace from '~/features/novel/components/content/ContentWorkspace.vue'
 import { useContentWorkspace } from '~/features/novel/composables/useContentWorkspace'
 import { watchNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
@@ -19,6 +20,7 @@ const workspace = shallowRef<ReturnType<typeof useContentWorkspace> | null>(null
 const novelId = computed(() => route.params.id as string)
 const {
   chapters,
+  characters,
   loadNovelWorkspaceContext,
   novel,
   scenes,
@@ -50,6 +52,12 @@ const {
   },
 })
 const projectTitle = computed(() => novel.value?.title || '内容工作台')
+const availableCharacterOptions = computed<SelectOption[]>(() => {
+  return characters.value.map(character => ({
+    label: character.name,
+    value: character.id,
+  }))
+})
 const activeChapter = computed(() => workspace.value?.selectedChapter.value || null)
 const activeScenes = computed(() => {
   const instance = workspace.value
@@ -174,6 +182,9 @@ function handleMergeScene(payload: { chapterId: string, sceneId: string }) {
       :chapters="workspace.chapterDrafts.value"
       :selected-chapter-id="workspace.selectedChapterId.value"
       :active-scenes="activeScenes"
+      :available-characters="availableCharacterOptions"
+      :current-chapter-linked-character-count="workspace.currentChapterLinkedCharacterCount.value"
+      :current-chapter-total-appearance-count="workspace.currentChapterTotalAppearanceCount.value"
       :saving-chapters="savingChapters"
       :saving-scenes="savingScenes"
       @update:source-text="workspace.setSourceText($event)"
@@ -204,3 +215,4 @@ function handleMergeScene(payload: { chapterId: string, sceneId: string }) {
   min-height: 420px;
 }
 </style>
+

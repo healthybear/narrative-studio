@@ -1,5 +1,5 @@
 ﻿import { describe, expect, it } from 'vitest'
-import type { NovelProject, ChapterRecord } from '~/features/novel/types/novel'
+import type { NovelProject, ChapterRecord, SceneRecord } from '~/features/novel/types/novel'
 import { useContentWorkspace } from '~/features/novel/composables/useContentWorkspace'
 
 function createNovel(overrides: Partial<NovelProject> = {}): NovelProject {
@@ -39,6 +39,25 @@ function createChapter(overrides: Partial<ChapterRecord> = {}): ChapterRecord {
     createdAt: '2026-06-12T00:00:00.000Z',
     updatedAt: '2026-06-12T00:00:00.000Z',
     isManuallyAdjusted: false,
+    ...overrides,
+  }
+}
+
+function createScene(overrides: Partial<SceneRecord> = {}): SceneRecord {
+  return {
+    id: 'scene-1',
+    novelId: 'novel-1',
+    chapterId: 'chapter-1',
+    title: '场景 1',
+    content: '第一章 雨夜\n雨下了一整夜。',
+    order: 1,
+    startOffset: 0,
+    endOffset: 14,
+    wordCount: 10,
+    characterIds: [],
+    source: 'manual',
+    createdAt: '2026-06-12T00:00:00.000Z',
+    updatedAt: '2026-06-12T00:00:00.000Z',
     ...overrides,
   }
 }
@@ -119,5 +138,79 @@ describe('content workspace composable', () => {
     workspace.mergeSceneWithPrevious(chapter.id, secondScene.id!)
 
     expect(workspace.getSceneDrafts(chapter.id)).toHaveLength(1)
+  })
+
+  it('updates scene character links and derives live chapter appearance summaries', () => {
+    const chapter = createChapter()
+    const workspace = useContentWorkspace({
+      novel: createNovel(),
+      chapters: [chapter],
+      scenes: [
+        createScene({
+          id: 'scene-1',
+          characterIds: ['character-1'],
+        }),
+        createScene({
+          id: 'scene-2',
+          title: '场景 2',
+          order: 2,
+          startOffset: 15,
+          endOffset: 28,
+          content: '第二个场景',
+          wordCount: 4,
+          characterIds: ['character-1', 'character-2'],
+        }),
+      ],
+    })
+
+    workspace.updateSceneDraft(chapter.id, 'scene-1', {
+      characterIds: ['character-2', 'character-3'],
+    })
+
+    expect(workspace.getSceneDrafts(chapter.id)[0]?.characterIds).toEqual(['character-2', 'character-3'])
+    expect(workspace.currentChapterLinkedCharacterCount.value).toBe(3)
+    expect(workspace.currentChapterTotalAppearanceCount.value).toBe(4)
+    expect(workspace.currentChapterAppearanceCountByCharacterId.value).toEqual({
+      'character-1': 1,
+      'character-2': 2,
+      'character-3': 1,
+    })
+  })
+
+  it('restores scene character links and chapter summaries from persisted data', () => {
+    const chapter = createChapter()
+    const workspace = useContentWorkspace({
+      novel: createNovel(),
+      chapters: [chapter],
+      scenes: [],
+    })
+
+    workspace.resetFromPersistedData(
+      createNovel(),
+      [chapter],
+      [
+        createScene({
+          id: 'scene-1',
+          characterIds: ['character-9'],
+        }),
+        createScene({
+          id: 'scene-2',
+          title: '场景 2',
+          order: 2,
+          startOffset: 15,
+          endOffset: 28,
+          content: '第二个场景',
+          wordCount: 4,
+          characterIds: ['character-9', 'character-8'],
+        }),
+      ]
+    )
+
+    expect(workspace.getSceneDrafts(chapter.id).map(scene => scene.characterIds)).toEqual([
+      ['character-9'],
+      ['character-9', 'character-8'],
+    ])
+    expect(workspace.currentChapterLinkedCharacterCount.value).toBe(2)
+    expect(workspace.currentChapterTotalAppearanceCount.value).toBe(3)
   })
 })
