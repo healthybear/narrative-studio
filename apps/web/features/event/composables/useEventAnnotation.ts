@@ -1,4 +1,6 @@
-﻿import { computed, ref } from 'vue'
+import { computed, ref, shallowRef, toValue, watch } from 'vue'
+import type { MaybeRefOrGetter } from 'vue'
+import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelStore } from '~/features/novel/stores/novel'
 import type { EventDraft } from '~/features/novel/types/novel'
 import {
@@ -8,20 +10,27 @@ import {
   toEventDrafts,
 } from '~/features/event/utils/event-annotation'
 
-export function useEventAnnotation(novelId: string) {
+export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
   const novelStore = useNovelStore()
-  const selectedSceneId = ref('')
-  const selectedEventId = ref('')
+  const {
+    events,
+    hasActiveContext,
+    novel,
+    chapters,
+    scenes: workspaceScenes,
+  } = useNovelWorkspaceContext(() => toValue(novelId))
+  const selectedSceneId = shallowRef('')
+  const selectedEventId = shallowRef('')
   const eventDrafts = ref<EventDraft[]>([])
+  const activeEventDrafts = computed(() => (hasActiveContext.value ? eventDrafts.value : []))
 
-  const novel = computed(() => novelStore.currentNovel)
   const chapterOrderById = computed<Record<string, number>>(() => {
     return Object.fromEntries(
-      novelStore.currentChapters.map(chapter => [chapter.id, chapter.order])
+      chapters.value.map(chapter => [chapter.id, chapter.order])
     )
   })
   const scenes = computed(() =>
-    novelStore.currentScenes
+    workspaceScenes.value
       .slice()
       .sort((left, right) => {
         const leftChapterOrder = chapterOrderById.value[left.chapterId] ?? Number.MAX_SAFE_INTEGER
@@ -39,7 +48,7 @@ export function useEventAnnotation(novelId: string) {
   )
   const selectedSceneEvents = computed(() =>
     normalizeEventDrafts(
-      eventDrafts.value.filter(event => event.sceneId === selectedSceneId.value)
+      activeEventDrafts.value.filter(event => event.sceneId === selectedSceneId.value)
     )
   )
   const selectedEvent = computed(() =>
@@ -47,7 +56,7 @@ export function useEventAnnotation(novelId: string) {
   )
   const chapterTitleById = computed<Record<string, string>>(() => {
     return Object.fromEntries(
-      novelStore.currentChapters.map(chapter => [chapter.id, chapter.title])
+      chapters.value.map(chapter => [chapter.id, chapter.title])
     )
   })
   const eventCounts = computed<Record<string, number>>(() => {
@@ -55,7 +64,7 @@ export function useEventAnnotation(novelId: string) {
       scenes.value.map(scene => [scene.id, getEventCount(scene.id)])
     )
   })
-  const totalEventCount = computed(() => eventDrafts.value.length)
+  const totalEventCount = computed(() => activeEventDrafts.value.length)
   const currentChapterTitle = computed(() => {
     if (!selectedScene.value) {
       return ''
@@ -65,11 +74,13 @@ export function useEventAnnotation(novelId: string) {
   })
 
   function syncEventDrafts() {
-    eventDrafts.value = toEventDrafts(novelStore.currentEvents)
+    eventDrafts.value = hasActiveContext.value
+      ? toEventDrafts(events.value)
+      : []
   }
 
   function getEventCount(sceneId: string) {
-    return eventDrafts.value.filter(event => event.sceneId === sceneId).length
+    return activeEventDrafts.value.filter(event => event.sceneId === sceneId).length
   }
 
   function ensureSelection() {
@@ -134,7 +145,7 @@ export function useEventAnnotation(novelId: string) {
 
     const activeEventId = selectedEventId.value
     const sceneEvents = normalizeEventDrafts(
-      eventDrafts.value.filter(event => event.sceneId === selectedScene.value!.id)
+      activeEventDrafts.value.filter(event => event.sceneId === selectedScene.value!.id)
     )
     const records = await novelStore.saveSceneEvents(
       novel.value.id,
@@ -149,11 +160,18 @@ export function useEventAnnotation(novelId: string) {
     return records
   }
 
-  async function loadContext() {
-    await novelStore.loadNovel(novelId)
+  function loadContext() {
     syncEventDrafts()
     ensureSelection()
   }
+
+  watch(
+    [hasActiveContext, events, scenes],
+    () => {
+      loadContext()
+    },
+    { immediate: true }
+  )
 
   return {
     novel,

@@ -1,16 +1,16 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, shallowRef } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { useMessage } from 'naive-ui'
+import type { SelectOption } from 'naive-ui'
 import ContentWorkspace from '~/features/novel/components/content/ContentWorkspace.vue'
 import { useContentWorkspace } from '~/features/novel/composables/useContentWorkspace'
+import { watchNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelStore } from '~/features/novel/stores/novel'
-import { useNovelProjectStore } from '~/features/novel/stores/project'
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const novelStore = useNovelStore()
-const projectStore = useNovelProjectStore()
 
 const loading = shallowRef(true)
 const savingChapters = shallowRef(false)
@@ -18,7 +18,46 @@ const savingScenes = shallowRef(false)
 const workspace = shallowRef<ReturnType<typeof useContentWorkspace> | null>(null)
 
 const novelId = computed(() => route.params.id as string)
-const projectTitle = computed(() => novelStore.currentNovel?.title || '内容工作台')
+const {
+  chapters,
+  characters,
+  loadNovelWorkspaceContext,
+  novel,
+  scenes,
+} = watchNovelWorkspaceContext(novelId, {
+  module: 'content',
+  onStart: () => {
+    loading.value = true
+    workspace.value = null
+  },
+  onLoaded: async () => {
+    if (!novel.value) {
+      message.error('项目不存在')
+      await router.replace('/novels')
+      return
+    }
+
+    workspace.value = useContentWorkspace({
+      novel: novel.value,
+      chapters: chapters.value,
+      scenes: scenes.value,
+    })
+  },
+  onError: (error) => {
+    console.error(error)
+    message.error('加载内容工作台失败')
+  },
+  onSettled: () => {
+    loading.value = false
+  },
+})
+const projectTitle = computed(() => novel.value?.title || '内容工作台')
+const availableCharacterOptions = computed<SelectOption[]>(() => {
+  return characters.value.map(character => ({
+    label: character.name,
+    value: character.id,
+  }))
+})
 const activeChapter = computed(() => workspace.value?.selectedChapter.value || null)
 const activeScenes = computed(() => {
   const instance = workspace.value
@@ -30,51 +69,19 @@ const activeScenes = computed(() => {
   return instance.getSceneDrafts(chapterId)
 })
 
-async function hydrateWorkspace() {
-  await Promise.all([
-    novelStore.loadNovel(novelId.value),
-    projectStore.markModuleEntered(novelId.value, 'content'),
-  ])
-
-  if (!novelStore.currentNovel) {
-    message.error('项目不存在')
-    void router.replace('/novels')
-    return
-  }
-
-  workspace.value = useContentWorkspace({
-    novel: novelStore.currentNovel,
-    chapters: novelStore.currentChapters,
-    scenes: novelStore.currentScenes,
-  })
-}
-
 async function reloadWorkspace() {
-  await novelStore.loadNovel(novelId.value)
+  await loadNovelWorkspaceContext({ force: true })
 
-  if (!novelStore.currentNovel) {
+  if (!novel.value) {
     return
   }
 
   workspace.value?.resetFromPersistedData(
-    novelStore.currentNovel,
-    novelStore.currentChapters,
-    novelStore.currentScenes,
+    novel.value,
+    chapters.value,
+    scenes.value,
   )
 }
-
-onMounted(async () => {
-  try {
-    await hydrateWorkspace()
-  }
-  catch (error) {
-    console.error(error)
-    message.error('加载内容工作台失败')
-  }
-  finally {
-    loading.value = false
-  }
-})
 
 function handleDetectChapters() {
   if (!workspace.value) {
@@ -175,6 +182,9 @@ function handleMergeScene(payload: { chapterId: string, sceneId: string }) {
       :chapters="workspace.chapterDrafts.value"
       :selected-chapter-id="workspace.selectedChapterId.value"
       :active-scenes="activeScenes"
+      :available-characters="availableCharacterOptions"
+      :current-chapter-linked-character-count="workspace.currentChapterLinkedCharacterCount.value"
+      :current-chapter-total-appearance-count="workspace.currentChapterTotalAppearanceCount.value"
       :saving-chapters="savingChapters"
       :saving-scenes="savingScenes"
       @update:source-text="workspace.setSourceText($event)"
@@ -205,3 +215,4 @@ function handleMergeScene(payload: { chapterId: string, sceneId: string }) {
   min-height: 420px;
 }
 </style>
+

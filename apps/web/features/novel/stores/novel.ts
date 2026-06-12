@@ -1,7 +1,12 @@
 ﻿import { defineStore } from 'pinia'
+import { markRaw } from 'vue'
 import type {
   ChapterDraftInput,
   ChapterRecord,
+  CharacterDraftInput,
+  CharacterRecord,
+  CharacterRelationDraftInput,
+  CharacterRelationRecord,
   EventDraftInput,
   EventRecord,
   NovelProject,
@@ -10,14 +15,19 @@ import type {
 } from '~/features/novel/types/novel'
 import {
   createNovelProject,
+  deleteNovelCharacter as removePersistedNovelCharacter,
   deleteNovelProject,
   getNovelProject,
   initializeScenesFromChapters,
   listChaptersByNovel,
+  listCharactersByNovel,
+  listCharacterRelationsByNovel,
   listEventsByNovel,
   listNovelProjects,
   listScenesByNovel,
   saveChapters,
+  saveNovelCharacters as persistNovelCharacters,
+  saveNovelCharacterRelations as persistNovelCharacterRelations,
   saveSceneEvents as persistSceneEvents,
   saveScenes,
   updateNovelProject,
@@ -31,13 +41,17 @@ interface CreateNovelInput {
   sourceFileType?: 'txt' | 'docx'
 }
 
+
 export const useNovelStore = defineStore('novel', {
   state: () => ({
     novels: [] as NovelProject[],
     currentNovel: null as NovelProject | null,
     currentChapters: [] as ChapterRecord[],
     currentScenes: [] as SceneRecord[],
+    currentCharacters: [] as CharacterRecord[],
+    currentCharacterRelations: [] as CharacterRelationRecord[],
     currentEvents: [] as EventRecord[],
+    isCurrentNovelContextLoaded: false,
     loading: false,
     saving: false,
     searchQuery: '',
@@ -45,6 +59,8 @@ export const useNovelStore = defineStore('novel', {
     sortBy: 'updatedAt' as 'updatedAt' | 'createdAt' | 'title' | 'wordCount',
     sortOrder: 'desc' as 'asc' | 'desc',
     lastError: '' as string,
+    inflightNovelContextLoads: markRaw(new Map<string, Promise<NovelProject>>()),
+    latestNovelContextLoadRequestId: 0,
   }),
 
   getters: {
@@ -100,6 +116,11 @@ export const useNovelStore = defineStore('novel', {
       this.lastError = ''
     },
 
+    // Fully loaded empty arrays are reusable, but same-novel state that was explicitly cleared must miss the cache.
+    hasLoadedNovelContext(id: string) {
+      return this.currentNovel?.id === id && this.isCurrentNovelContextLoaded
+    },
+
     async loadNovels() {
       this.loading = true
       this.clearError()
@@ -116,13 +137,16 @@ export const useNovelStore = defineStore('novel', {
     },
 
     async loadNovel(id: string) {
+      const requestId = ++this.latestNovelContextLoadRequestId
       this.loading = true
       this.clearError()
 
       try {
-        const [novel, chapters, events] = await Promise.all([
+        const [novel, chapters, characters, characterRelations, events] = await Promise.all([
           getNovelProject(id),
           listChaptersByNovel(id),
+          listCharactersByNovel(id),
+          listCharacterRelationsByNovel(id),
           listEventsByNovel(id),
         ])
         let scenes = await listScenesByNovel(id)
@@ -130,10 +154,17 @@ export const useNovelStore = defineStore('novel', {
           scenes = await initializeScenesFromChapters(id)
         }
 
+        if (requestId !== this.latestNovelContextLoadRequestId) {
+          return novel
+        }
+
         this.currentNovel = novel
         this.currentChapters = chapters
         this.currentScenes = scenes
+        this.currentCharacters = characters
+        this.currentCharacterRelations = characterRelations
         this.currentEvents = events
+        this.isCurrentNovelContextLoaded = true
 
         const index = this.novels.findIndex(item => item.id === id)
         if (index === -1) {
@@ -145,11 +176,41 @@ export const useNovelStore = defineStore('novel', {
         return novel
       } catch (error) {
         console.error('加载项目失败:', error)
-        this.setError(error instanceof Error ? error.message : '加载项目失败')
+        if (requestId === this.latestNovelContextLoadRequestId) {
+          this.setError(error instanceof Error ? error.message : '加载项目失败')
+        }
         throw error
       } finally {
-        this.loading = false
+        if (requestId === this.latestNovelContextLoadRequestId) {
+          this.loading = false
+        }
       }
+    },
+
+    async loadNovelIfNeeded(id: string, options: { force?: boolean } = {}) {
+      if (!options.force && this.hasLoadedNovelContext(id)) {
+        return this.currentNovel
+      }
+
+      if (!options.force) {
+        const inflightLoad = this.inflightNovelContextLoads.get(id)
+        if (inflightLoad) {
+          return inflightLoad
+        }
+      }
+
+      const loadPromise = this.loadNovel(id)
+
+      if (!options.force) {
+        this.inflightNovelContextLoads.set(id, loadPromise)
+        void loadPromise.finally(() => {
+          if (this.inflightNovelContextLoads.get(id) === loadPromise) {
+            this.inflightNovelContextLoads.delete(id)
+          }
+        })
+      }
+
+      return loadPromise
     },
 
     async createNovel(data: CreateNovelInput) {
@@ -203,7 +264,10 @@ export const useNovelStore = defineStore('novel', {
           this.currentNovel = null
           this.currentChapters = []
           this.currentScenes = []
+          this.currentCharacters = []
+          this.currentCharacterRelations = []
           this.currentEvents = []
+          this.isCurrentNovelContextLoaded = false
         }
       } catch (error) {
         console.error('删除项目失败:', error)
@@ -223,6 +287,7 @@ export const useNovelStore = defineStore('novel', {
         this.currentChapters = records
         this.currentScenes = []
         this.currentEvents = []
+        this.isCurrentNovelContextLoaded = false
 
         if (this.currentNovel?.id === novelId) {
           this.currentNovel = await updateNovelProject(novelId, {
@@ -327,6 +392,66 @@ export const useNovelStore = defineStore('novel', {
       }
     },
 
+    async saveNovelCharacters(novelId: string, characters: CharacterDraftInput[]) {
+      this.saving = true
+      this.clearError()
+      try {
+        const records = await persistNovelCharacters(novelId, characters)
+        this.currentCharacters = records
+        this.currentCharacterRelations = this.currentCharacterRelations.filter(relation =>
+          records.some(character => character.id === relation.character1Id)
+          && records.some(character => character.id === relation.character2Id)
+        )
+        return records
+      } catch (error) {
+        console.error('保存角色失败:', error)
+        this.setError(error instanceof Error ? error.message : '保存角色失败')
+        throw error
+      } finally {
+        this.saving = false
+      }
+    },
+
+    async deleteNovelCharacter(novelId: string, characterId: string) {
+      this.saving = true
+      this.clearError()
+
+      try {
+        await removePersistedNovelCharacter(novelId, characterId)
+        this.currentCharacters = this.currentCharacters.filter(character => character.id !== characterId)
+        this.currentCharacterRelations = this.currentCharacterRelations.filter(relation =>
+          relation.character1Id !== characterId && relation.character2Id !== characterId
+        )
+        this.currentScenes = this.currentScenes.map(scene => ({
+          ...scene,
+          characterIds: scene.characterIds.filter(id => id !== characterId),
+        }))
+      } catch (error) {
+        console.error('删除角色失败:', error)
+        this.setError(error instanceof Error ? error.message : '删除角色失败')
+        throw error
+      } finally {
+        this.saving = false
+      }
+    },
+
+    async saveNovelCharacterRelations(novelId: string, relations: CharacterRelationDraftInput[]) {
+      this.saving = true
+      this.clearError()
+
+      try {
+        const records = await persistNovelCharacterRelations(novelId, relations)
+        this.currentCharacterRelations = records
+        return records
+      } catch (error) {
+        console.error('保存角色关系失败:', error)
+        this.setError(error instanceof Error ? error.message : '保存角色关系失败')
+        throw error
+      } finally {
+        this.saving = false
+      }
+    },
+
     setSearchQuery(query: string) {
       this.searchQuery = query
     },
@@ -341,4 +466,6 @@ export const useNovelStore = defineStore('novel', {
     },
   },
 })
+
+
 

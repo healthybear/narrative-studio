@@ -44,18 +44,21 @@ describe('app shell contract', () => {
     expect(appStore).toContain('toggleDrawer')
     expect(appTheme).toContain('export function useAppTheme()')
     expect(appTheme).toContain('useAppStore')
+    expect(appTheme).toContain('import.meta.client')
+    expect(appTheme).toContain('initializeTheme')
+    expect(appTheme).not.toContain('onMounted')
     expect(responsive).toContain('export function useResponsive()')
   })
 
-  it('initializes providers through runtime theme assets and client startup hooks', () => {
+  it('keeps IndexedDB startup out of AppProviders while theme setup stays there', () => {
     const providers = read(resolve(webRoot, 'components/app/AppProviders.vue'))
+    const scriptBlock = providers.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)
 
     expect(providers).toContain('naiveThemeOverrides')
-    expect(providers).toContain("from '~/assets/styles/themes/naive'")
-    expect(providers).toContain(':theme-overrides="naiveThemeOverrides"')
-    expect(providers).toContain('initDB(')
-    expect(providers).toContain("~/utils/browser/db")
-    expect(providers).toContain('onMounted(')
+    expect(scriptBlock?.[1]).toContain('useAppTheme')
+    expect(scriptBlock?.[1]).not.toContain('initDB')
+    expect(scriptBlock?.[1]).not.toContain('~/utils/browser/db')
+    expect(scriptBlock?.[1]).not.toContain('onMounted')
   })
 
   it('wires layouts through the new app shell boundary', () => {

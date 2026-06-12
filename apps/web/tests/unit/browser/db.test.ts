@@ -4,18 +4,23 @@ import {
   createNovelProject,
   createNovelProjectMeta,
   deleteNovelProject,
+  deleteNovelCharacter,
   exportNovelProject,
   getDB,
   getNovelProject,
   getNovelProjectBundle,
   getNovelProjectStats,
   initializeScenesFromChapters,
+  listCharactersByNovel,
+  listCharacterRelationsByNovel,
   listEventsByNovel,
   listEventsByScene,
   listNovelProjectActivities,
   listScenesByChapter,
   resetDB,
   saveChapters,
+  saveNovelCharacters,
+  saveNovelCharacterRelations,
   saveSceneEvents,
   saveScenes,
   updateNovelProject,
@@ -293,6 +298,205 @@ describe('database schema and project crud', () => {
     ])
 
     await expect(listEventsByNovel(project.id)).resolves.toHaveLength(0)
+  })
+
+  it('saves characters by novel, replaces prior records, and updates project stats', async () => {
+    const project = await createNovelProjectMeta({
+      title: 'Character Project',
+      summary: '',
+      logline: '',
+      genre: '',
+      perspective: '',
+      era: '',
+      tags: [],
+      targetWordCount: null,
+    })
+
+    const created = await saveNovelCharacters(project.id, [
+      {
+        name: 'Lin',
+        aliases: ['Captain Lin', ' 阿林 '],
+        description: 'Lead investigator',
+      },
+      {
+        name: 'Mori',
+        aliases: [],
+        description: 'Rival witness',
+      },
+    ])
+
+    expect(created).toHaveLength(2)
+    expect(created[0]?.aliases).toEqual(['Captain Lin', '阿林'])
+    expect(created[1]?.name).toBe('Mori')
+
+    const listed = await listCharactersByNovel(project.id)
+    expect(listed.map(character => character.name)).toEqual(['Lin', 'Mori'])
+
+    const statsAfterCreate = await getNovelProjectStats(project.id)
+    expect(statsAfterCreate?.characterCount).toBe(2)
+
+    const replaced = await saveNovelCharacters(project.id, [
+      {
+        id: created[1]!.id,
+        name: 'Mori Revised',
+        aliases: ['Witness'],
+        description: 'Updated rival witness',
+      },
+    ])
+
+    expect(replaced).toHaveLength(1)
+    expect(replaced[0]?.name).toBe('Mori Revised')
+    await expect(listCharactersByNovel(project.id)).resolves.toHaveLength(1)
+
+    const statsAfterReplace = await getNovelProjectStats(project.id)
+    expect(statsAfterReplace?.characterCount).toBe(1)
+  })
+
+  it('deletes a character and removes orphaned scene references', async () => {
+    const project = await createNovelProject({
+      title: 'Character Cleanup',
+      rawText: 'Chapter 1\nAlpha Beta Gamma',
+    })
+
+    const [chapter] = await saveChapters(project.id, [
+      { title: 'Chapter 1', content: 'Alpha Beta Gamma', startOffset: 0, endOffset: 16, order: 1 },
+    ])
+
+    const [hero, ally] = await saveNovelCharacters(project.id, [
+      {
+        name: 'Hero',
+        aliases: [],
+        description: 'Main character',
+      },
+      {
+        name: 'Ally',
+        aliases: [],
+        description: 'Supporting role',
+      },
+    ])
+
+    await saveNovelCharacterRelations(project.id, [
+      {
+        character1Id: hero!.id,
+        character2Id: ally!.id,
+        relationType: '搭档',
+        description: '长期合作',
+      },
+    ])
+
+    await saveScenes(project.id, chapter!.id, [
+      {
+        title: 'Shared Scene',
+        content: 'Alpha Beta Gamma',
+        order: 1,
+        startOffset: 0,
+        endOffset: 16,
+        wordCount: 3,
+        characterIds: [hero!.id, ally!.id],
+        source: 'manual',
+      },
+    ])
+
+    await deleteNovelCharacter(project.id, hero!.id)
+
+    const remainingCharacters = await listCharactersByNovel(project.id)
+    expect(remainingCharacters.map(character => character.name)).toEqual(['Ally'])
+
+    const [updatedScene] = await listScenesByChapter(chapter!.id)
+    expect(updatedScene?.characterIds).toEqual([ally!.id])
+    await expect(listCharacterRelationsByNovel(project.id)).resolves.toEqual([])
+
+    const stats = await getNovelProjectStats(project.id)
+    expect(stats?.characterCount).toBe(1)
+  })
+
+  it('saves character relations by novel, replaces prior rows, and clears orphaned relations on character save', async () => {
+    const project = await createNovelProjectMeta({
+      title: 'Relation Project',
+      summary: '',
+      logline: '',
+      genre: '',
+      perspective: '',
+      era: '',
+      tags: [],
+      targetWordCount: null,
+    })
+
+    const [lin, mori, qiao] = await saveNovelCharacters(project.id, [
+      {
+        name: 'Lin',
+        aliases: [],
+        description: 'Lead investigator',
+      },
+      {
+        name: 'Mori',
+        aliases: [],
+        description: 'Rival witness',
+      },
+      {
+        name: 'Qiao',
+        aliases: [],
+        description: 'Archivist',
+      },
+    ])
+
+    const created = await saveNovelCharacterRelations(project.id, [
+      {
+        character1Id: lin!.id,
+        character2Id: mori!.id,
+        relationType: '对手',
+        description: '互相试探',
+      },
+      {
+        character1Id: lin!.id,
+        character2Id: qiao!.id,
+        relationType: '盟友',
+        description: '共享线索',
+      },
+    ])
+
+    expect(created).toHaveLength(2)
+    expect(created[0]?.relationType).toBe('对手')
+
+    const listed = await listCharacterRelationsByNovel(project.id)
+    expect(listed).toHaveLength(2)
+    expect(listed.map(relation => relation.character2Id)).toEqual(
+      expect.arrayContaining([mori!.id, qiao!.id])
+    )
+
+    const replaced = await saveNovelCharacterRelations(project.id, [
+      {
+        id: created[1]!.id,
+        character1Id: lin!.id,
+        character2Id: qiao!.id,
+        relationType: '核心盟友',
+        description: '继续并肩调查',
+      },
+    ])
+
+    expect(replaced).toHaveLength(1)
+    expect(replaced[0]?.relationType).toBe('核心盟友')
+    await expect(listCharacterRelationsByNovel(project.id)).resolves.toHaveLength(1)
+
+    await saveNovelCharacterRelations(project.id, [
+      {
+        character1Id: lin!.id,
+        character2Id: mori!.id,
+        relationType: '对手',
+        description: '保留一条关系用于清理验证',
+      },
+    ])
+
+    await saveNovelCharacters(project.id, [
+      {
+        id: lin!.id,
+        name: 'Lin',
+        aliases: [],
+        description: 'Lead investigator',
+      },
+    ])
+
+    await expect(listCharacterRelationsByNovel(project.id)).resolves.toEqual([])
   })
 
   it('updates project stats activity text when chapters are saved', async () => {

@@ -1,17 +1,15 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import ProjectActivityFeed from '~/features/novel/components/ProjectActivityFeed.vue'
+import { watchNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelProjectStore } from '~/features/novel/stores/project'
-import { useNovelStore } from '~/features/novel/stores/novel'
-import type { NovelProjectStats } from '~/features/novel/types/novel'
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const projectStore = useNovelProjectStore()
-const novelStore = useNovelStore()
 
 const supportedModules = ['content', 'structure', 'events', 'characters', 'emotions', 'perspective', 'analysis'] as const
 
@@ -66,37 +64,33 @@ const projectId = computed(() => route.params.id as string)
 const rawModule = computed(() => route.params.module as string)
 const moduleKey = computed(() => rawModule.value as ModuleKey)
 const isSupportedModule = computed(() => supportedModules.includes(moduleKey.value))
-const project = computed(() => projectStore.projects.find(item => item.id === projectId.value))
-const stats = computed(() => projectStore.statsById[projectId.value])
-const activities = computed(() => projectStore.activityById[projectId.value] || [])
-const currentModule = computed(() => (isSupportedModule.value ? moduleMeta[moduleKey.value] : null))
+watchNovelWorkspaceContext(projectId, {
+  module: computed(() => (isSupportedModule.value ? moduleKey.value : null)),
+  onLoaded: async (id) => {
+    if (!isSupportedModule.value) {
+      message.error('模块不存在')
+      await router.replace(`/novels/${id}`)
+      return
+    }
 
-onMounted(async () => {
-  if (!isSupportedModule.value) {
-    message.error('模块不存在')
-    void router.replace(`/novels/${projectId.value}`)
-    return
-  }
-
-  try {
     await Promise.all([
       projectStore.loadProjects(),
-      projectStore.loadProjectActivities(projectId.value),
-      novelStore.loadNovel(projectId.value),
+      projectStore.loadProjectActivities(id),
     ])
 
     if (!project.value) {
       message.error('项目不存在')
-      void router.replace('/novels')
-      return
+      await router.replace('/novels')
     }
-
-    await projectStore.markModuleEntered(projectId.value, moduleKey.value as NovelProjectStats['lastActiveModule'])
-  }
-  catch {
+  },
+  onError: () => {
     message.error('加载模块失败')
-  }
+  },
 })
+const project = computed(() => projectStore.projects.find(item => item.id === projectId.value))
+const stats = computed(() => projectStore.statsById[projectId.value])
+const activities = computed(() => projectStore.activityById[projectId.value] || [])
+const currentModule = computed(() => (isSupportedModule.value ? moduleMeta[moduleKey.value] : null))
 </script>
 
 <template>

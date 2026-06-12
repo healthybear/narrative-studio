@@ -155,6 +155,25 @@ export interface CharacterRelationRecord {
   updatedAt: string
 }
 
+export interface CharacterDraftInput {
+  id?: string
+  name: string
+  aliases: string[]
+  description?: string
+}
+
+export type CharacterDraft = Omit<CharacterRecord, 'novelId' | 'createdAt' | 'updatedAt'>
+
+export interface CharacterRelationDraftInput {
+  id?: string
+  character1Id: string
+  character2Id: string
+  relationType: string
+  description?: string
+}
+
+export type CharacterRelationDraft = Omit<CharacterRelationRecord, 'novelId' | 'createdAt' | 'updatedAt'>
+
 export interface EventRecord {
   id: string
   novelId: string

@@ -1,25 +1,47 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import ProjectActivityFeed from '~/features/novel/components/ProjectActivityFeed.vue'
 import ProjectFormDrawer from '~/features/novel/components/ProjectFormDrawer.vue'
 import ProjectOverviewHero from '~/features/novel/components/ProjectOverviewHero.vue'
+import { watchNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelProjectStore } from '~/features/novel/stores/project'
-import { useNovelStore } from '~/features/novel/stores/novel'
 import type { FormData } from '~/features/novel/components/ProjectFormDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const projectStore = useNovelProjectStore()
-const novelStore = useNovelStore()
 
 const showFormDrawer = ref(false)
 const submittingForm = ref(false)
 const loading = ref(true)
 
 const projectId = computed(() => route.params.id as string)
+const { loadNovelWorkspaceContext } = watchNovelWorkspaceContext(projectId, {
+  module: 'overview',
+  onStart: () => {
+    loading.value = true
+  },
+  onLoaded: async (id) => {
+    await Promise.all([
+      projectStore.loadProjects(),
+      projectStore.loadProjectActivities(id),
+    ])
+
+    if (!project.value) {
+      message.error('项目不存在')
+      await router.push('/novels')
+    }
+  },
+  onError: () => {
+    message.error('加载项目失败')
+  },
+  onSettled: () => {
+    loading.value = false
+  },
+})
 const project = computed(() => projectStore.projects.find(item => item.id === projectId.value))
 const stats = computed(() => projectStore.statsById[projectId.value])
 const activities = computed(() => projectStore.activityById[projectId.value] || [])
@@ -69,30 +91,6 @@ const moduleCards = [
   },
 ] as const
 
-onMounted(async () => {
-  try {
-    await Promise.all([
-      projectStore.loadProjects(),
-      projectStore.loadProjectActivities(projectId.value),
-      novelStore.loadNovel(projectId.value),
-    ])
-
-    if (!project.value) {
-      message.error('项目不存在')
-      void router.push('/novels')
-      return
-    }
-
-    await projectStore.markModuleEntered(projectId.value, 'overview')
-  }
-  catch {
-    message.error('加载项目失败')
-  }
-  finally {
-    loading.value = false
-  }
-})
-
 function openEditDrawer() {
   showFormDrawer.value = true
 }
@@ -116,7 +114,7 @@ async function handleFormSubmit(data: FormData) {
       tags,
       targetWordCount: data.targetWordCount,
     })
-    await novelStore.loadNovel(projectId.value)
+    await loadNovelWorkspaceContext({ force: true })
     message.success('项目已更新')
     showFormDrawer.value = false
   }

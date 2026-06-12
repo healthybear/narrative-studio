@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
 import { computed } from 'vue'
+import type { SelectOption } from 'naive-ui'
 import type { SceneDraftInput } from '~/features/novel/types/novel'
 import type { DetectedChapter } from '~/features/novel/utils/chapter-parser'
 import ChapterEditorPanel from '~/features/novel/components/content/ChapterEditorPanel.vue'
@@ -12,6 +13,9 @@ const props = defineProps<{
   chapters: DetectedChapter[]
   selectedChapterId: string | null
   activeScenes: SceneDraftInput[]
+  availableCharacters: SelectOption[]
+  currentChapterLinkedCharacterCount: number
+  currentChapterTotalAppearanceCount: number
   savingChapters?: boolean
   savingScenes?: boolean
 }>()
@@ -67,6 +71,14 @@ const totalSceneCount = computed(() => props.activeScenes.length)
         <span class="summary-card__label">当前场景数</span>
         <strong>{{ totalSceneCount }}</strong>
       </div>
+      <div class="summary-card">
+        <span class="summary-card__label">关联角色数</span>
+        <strong>{{ props.currentChapterLinkedCharacterCount }}</strong>
+      </div>
+      <div class="summary-card">
+        <span class="summary-card__label">角色出场次数</span>
+        <strong>{{ props.currentChapterTotalAppearanceCount }}</strong>
+      </div>
       <div class="summary-card summary-card--wide">
         <span class="summary-card__label">当前章节</span>
         <strong>{{ selectedChapter?.title || '尚未选择章节' }}</strong>
@@ -95,6 +107,7 @@ const totalSceneCount = computed(() => props.activeScenes.length)
         <SceneEditorPanel
           :chapter="selectedChapter"
           :scenes="props.activeScenes"
+          :available-characters="props.availableCharacters"
           @update-scene="emit('update-scene', $event)"
           @split-scene="emit('split-scene', $event)"
           @merge-scene="emit('merge-scene', $event)"
@@ -154,7 +167,7 @@ const totalSceneCount = computed(() => props.activeScenes.length)
 
 .workspace-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -194,6 +207,10 @@ const totalSceneCount = computed(() => props.activeScenes.length)
 }
 
 @media (max-width: 1280px) {
+  .workspace-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .workspace-grid {
     grid-template-columns: 1fr;
   }
@@ -210,3 +227,4 @@ const totalSceneCount = computed(() => props.activeScenes.length)
   }
 }
 </style>
+

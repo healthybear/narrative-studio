@@ -1,8 +1,6 @@
 ﻿<script setup lang="ts">
-import { onMounted } from 'vue'
 import { naiveThemeOverrides } from '~/assets/styles/themes/naive'
 import { useAppTheme } from '~/composables/app/useAppTheme'
-import { initDB } from '~/utils/browser/db'
 import {
   NConfigProvider,
   NDialogProvider,
@@ -13,15 +11,8 @@ import {
   zhCN,
 } from 'naive-ui'
 
+// Theme wiring stays here; data startup does not.
 const { theme } = useAppTheme()
-
-onMounted(async () => {
-  try {
-    await initDB()
-  } catch (error) {
-    console.error('IndexedDB 初始化失败:', error)
-  }
-})
 </script>
 
 <template>

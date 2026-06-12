@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, h, onMounted } from 'vue'
+import { computed, h } from 'vue'
 import { NIcon } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 import {
@@ -15,15 +15,14 @@ import {
   SunnyOutline,
 } from '@vicons/ionicons5'
 import { useAppTheme } from '~/composables/app/useAppTheme'
-import { useNovelStore } from '~/features/novel/stores/novel'
+import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 
 const route = useRoute()
 const router = useRouter()
-const novelStore = useNovelStore()
 const { isDark, toggleTheme } = useAppTheme()
 
 const novelId = computed(() => route.params.id as string)
-const currentNovel = computed(() => novelStore.currentNovel)
+const { novel: currentNovel } = useNovelWorkspaceContext(novelId)
 
 const activeKey = computed(() => {
   const path = route.path
@@ -81,11 +80,6 @@ function handleMenuSelect(key: string) {
   void router.push(`/novels/${novelId.value}/${key}`)
 }
 
-onMounted(async () => {
-  if (novelId.value) {
-    await novelStore.loadNovel(novelId.value)
-  }
-})
 </script>
 
 <template>

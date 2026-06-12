@@ -16,6 +16,8 @@ export async function readTextFile(file: File): Promise<string> {
 
 export async function readWordFile(file: File): Promise<string> {
   try {
+    // Keep Word parsing lazy so routes that never import `.docx` files do not
+    // pay the `mammoth` cost during startup or unrelated HMR cycles.
     const mammoth = await import('mammoth')
     const arrayBuffer = await file.arrayBuffer()
     const result = await mammoth.extractRawText({ arrayBuffer })

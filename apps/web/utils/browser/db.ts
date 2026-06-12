@@ -10,7 +10,9 @@ import { nanoid } from 'nanoid'
 import type {
   ChapterDraftInput,
   ChapterRecord,
+  CharacterDraftInput,
   CharacterRecord,
+  CharacterRelationDraftInput,
   CharacterRelationRecord,
   EmotionRecord,
   EventDraftInput,
@@ -303,6 +305,20 @@ function countWords(text: string) {
   return chineseChars.length + latinWords.length
 }
 
+function normalizeCharacterAliases(aliases: string[]) {
+  return Array.from(
+    new Set(
+      aliases
+        .map(alias => alias.trim())
+        .filter(Boolean)
+    )
+  )
+}
+
+function normalizeRelationText(value: string) {
+  return value.trim()
+}
+
 function createNovelRecordFromMeta(meta: NovelProjectMeta): NovelProject {
   return {
     ...meta,
@@ -518,6 +534,18 @@ export async function listScenesByChapter(chapterId: string) {
   const db = await getDB()
   const scenes = await db.getAllFromIndex('scenes', 'chapterId', chapterId)
   return scenes.sort((left, right) => left.order - right.order)
+}
+
+export async function listCharactersByNovel(novelId: string) {
+  const db = await getDB()
+  const characters = await db.getAllFromIndex('characters', 'novelId', novelId)
+  return characters.sort((left, right) => left.name.localeCompare(right.name, 'zh-CN'))
+}
+
+export async function listCharacterRelationsByNovel(novelId: string) {
+  const db = await getDB()
+  const relations = await db.getAllFromIndex('character_relations', 'novelId', novelId)
+  return relations.sort((left, right) => left.updatedAt.localeCompare(right.updatedAt))
 }
 
 export async function listEventsByScene(sceneId: string) {
@@ -786,6 +814,213 @@ export async function saveSceneEvents(
   })
 
   return records
+}
+
+export async function saveNovelCharacters(
+  novelId: string,
+  characters: CharacterDraftInput[]
+) {
+  const db = await getDB()
+  const tx = db.transaction(['novels', 'characters', 'character_relations', 'scenes'], 'readwrite')
+  const novelStore = tx.objectStore('novels')
+  const characterStore = tx.objectStore('characters')
+  const relationStore = tx.objectStore('character_relations')
+  const sceneStore = tx.objectStore('scenes')
+  const novel = await novelStore.get(novelId)
+
+  ensureNovelExists(novel)
+
+  const existingCharacters = await characterStore.index('novelId').getAll(novelId)
+  const existingById = new Map(existingCharacters.map(character => [character.id, character]))
+
+  for (const character of existingCharacters) {
+    await characterStore.delete(character.id)
+  }
+
+  const now = new Date().toISOString()
+  const records: CharacterRecord[] = characters.map((character) => {
+    const current = character.id ? existingById.get(character.id) : undefined
+
+    return {
+      id: character.id ?? nanoid(),
+      novelId,
+      name: character.name.trim(),
+      aliases: normalizeCharacterAliases(character.aliases),
+      description: character.description?.trim() || undefined,
+      createdAt: current?.createdAt ?? now,
+      updatedAt: now,
+    }
+  })
+
+  for (const record of records) {
+    await characterStore.put(record)
+  }
+
+  const validCharacterIds = new Set(records.map(character => character.id))
+  const scenes = await sceneStore.index('novelId').getAll(novelId)
+  for (const scene of scenes) {
+    const nextCharacterIds = scene.characterIds.filter(characterId => validCharacterIds.has(characterId))
+    if (nextCharacterIds.length === scene.characterIds.length) {
+      continue
+    }
+
+    await sceneStore.put({
+      ...scene,
+      characterIds: nextCharacterIds,
+      updatedAt: now,
+    })
+  }
+
+  const relations = await relationStore.index('novelId').getAll(novelId)
+  for (const relation of relations) {
+    if (validCharacterIds.has(relation.character1Id) && validCharacterIds.has(relation.character2Id)) {
+      continue
+    }
+
+    await relationStore.delete(relation.id)
+  }
+
+  await tx.done
+
+  const stats = await getNovelProjectStats(novelId)
+  await upsertNovelProjectStats({
+    novelId,
+    chapterCount: stats?.chapterCount ?? novel.chapterCount,
+    eventCount: stats?.eventCount ?? 0,
+    characterCount: records.length,
+    pendingEventCount: stats?.pendingEventCount ?? 0,
+    lastActiveModule: stats?.lastActiveModule ?? 'characters',
+    lastActivityText: stats?.lastActivityText ?? '',
+    updatedAt: now,
+  })
+
+  await recordNovelProjectActivity({
+    novelId,
+    type: 'project_updated',
+    text: `保存了 ${records.length} 个角色`,
+  })
+
+  return records
+}
+
+export async function saveNovelCharacterRelations(
+  novelId: string,
+  relations: CharacterRelationDraftInput[]
+) {
+  const db = await getDB()
+  const tx = db.transaction(['characters', 'character_relations'], 'readwrite')
+  const characterStore = tx.objectStore('characters')
+  const relationStore = tx.objectStore('character_relations')
+  const availableCharacters = await characterStore.index('novelId').getAll(novelId)
+  const validCharacterIds = new Set(availableCharacters.map(character => character.id))
+  const existingRelations = await relationStore.index('novelId').getAll(novelId)
+  const existingById = new Map(existingRelations.map(relation => [relation.id, relation]))
+  const relationKeys = new Set<string>()
+
+  for (const relation of existingRelations) {
+    await relationStore.delete(relation.id)
+  }
+
+  const now = new Date().toISOString()
+  const records: CharacterRelationRecord[] = relations.map((relation) => {
+    const relationType = normalizeRelationText(relation.relationType)
+    const description = relation.description?.trim() || undefined
+
+    if (!validCharacterIds.has(relation.character1Id) || !validCharacterIds.has(relation.character2Id)) {
+      throw new Error('角色关系引用了不存在的角色')
+    }
+
+    if (relation.character1Id === relation.character2Id) {
+      throw new Error('角色关系不能指向自己')
+    }
+
+    if (!relationType) {
+      throw new Error('关系类型不能为空')
+    }
+
+    const pairKey = [relation.character1Id, relation.character2Id].sort().join('::')
+    if (relationKeys.has(pairKey)) {
+      throw new Error('同一对角色只能保留一条关系')
+    }
+
+    relationKeys.add(pairKey)
+
+    const current = relation.id ? existingById.get(relation.id) : undefined
+    return {
+      id: relation.id ?? nanoid(),
+      novelId,
+      character1Id: relation.character1Id,
+      character2Id: relation.character2Id,
+      relationType,
+      description,
+      createdAt: current?.createdAt ?? now,
+      updatedAt: now,
+    }
+  })
+
+  for (const record of records) {
+    await relationStore.put(record)
+  }
+
+  await tx.done
+  return records
+}
+
+export async function deleteNovelCharacter(novelId: string, characterId: string) {
+  const db = await getDB()
+  const tx = db.transaction(['characters', 'character_relations', 'scenes'], 'readwrite')
+  const characterStore = tx.objectStore('characters')
+  const relationStore = tx.objectStore('character_relations')
+  const sceneStore = tx.objectStore('scenes')
+  const character = await characterStore.get(characterId)
+
+  if (!character || character.novelId !== novelId) {
+    throw new Error('未找到角色')
+  }
+
+  await characterStore.delete(characterId)
+
+  const relations = await relationStore.index('novelId').getAll(novelId)
+  for (const relation of relations) {
+    if (relation.character1Id === characterId || relation.character2Id === characterId) {
+      await relationStore.delete(relation.id)
+    }
+  }
+
+  const now = new Date().toISOString()
+  const scenes = await sceneStore.index('novelId').getAll(novelId)
+  for (const scene of scenes) {
+    if (!scene.characterIds.includes(characterId)) {
+      continue
+    }
+
+    await sceneStore.put({
+      ...scene,
+      characterIds: scene.characterIds.filter(id => id !== characterId),
+      updatedAt: now,
+    })
+  }
+
+  await tx.done
+
+  const remainingCharacters = await listCharactersByNovel(novelId)
+  const stats = await getNovelProjectStats(novelId)
+  await upsertNovelProjectStats({
+    novelId,
+    chapterCount: stats?.chapterCount ?? 0,
+    eventCount: stats?.eventCount ?? 0,
+    characterCount: remainingCharacters.length,
+    pendingEventCount: stats?.pendingEventCount ?? 0,
+    lastActiveModule: stats?.lastActiveModule ?? 'characters',
+    lastActivityText: stats?.lastActivityText ?? '',
+    updatedAt: now,
+  })
+
+  await recordNovelProjectActivity({
+    novelId,
+    type: 'project_updated',
+    text: `删除角色 ${character.name}`,
+  })
 }
 
 export async function getNovelProjectBundle(id: string): Promise<NovelProjectBundle> {

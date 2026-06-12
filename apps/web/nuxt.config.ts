@@ -18,9 +18,6 @@ function createManualChunks(id: string) {
   if (id.includes('echarts'))
     return 'echarts'
 
-  if (id.includes('d3'))
-    return 'd3'
-
   if (id.includes('@vue') || /[\\/]vue[\\/]/.test(id) || id.includes('pinia') || id.includes('@vueuse'))
     return 'vue-core'
 }
@@ -37,12 +34,9 @@ export default defineNuxtConfig({
 
   components: [
     {
-      path: '~/components',
-      extensions: ['vue'],
-      pathPrefix: false,
-    },
-    {
-      path: '~/features',
+      // Keep auto-registration limited to the app shell so feature edits do not
+      // expand cold-start and HMR invalidation scope across the whole workspace.
+      path: '~/components/app',
       extensions: ['vue'],
       pathPrefix: false,
     },
