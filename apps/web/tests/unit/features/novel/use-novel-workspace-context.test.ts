@@ -1,9 +1,11 @@
 import { computed, shallowRef } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useEventAnnotation } from '~/features/event/composables/useEventAnnotation'
 import {
   loadNovelWorkspaceContext,
   useNovelWorkspaceContext,
+  watchNovelWorkspaceContext,
 } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelStore } from '~/features/novel/stores/novel'
 import type {
@@ -128,5 +130,62 @@ describe('useNovelWorkspaceContext', () => {
     expect(context.chapters.value).toEqual([chapter])
     expect(context.scenes.value).toEqual([scene])
     expect(context.events.value).toEqual([event])
+  })
+
+  it('reruns the shared workspace loader when the requested novel id changes', async () => {
+    const novelStore = useNovelStore()
+    const requestedNovelId = shallowRef('novel-1')
+    const loadNovelIfNeeded = vi.spyOn(novelStore, 'loadNovelIfNeeded')
+      .mockImplementation(async (id: string) => createNovel(id))
+    const onLoaded = vi.fn()
+
+    const context = watchNovelWorkspaceContext(
+      computed(() => requestedNovelId.value),
+      { onLoaded },
+    )
+
+    await vi.waitFor(() => {
+      expect(loadNovelIfNeeded).toHaveBeenNthCalledWith(1, 'novel-1', {})
+      expect(onLoaded).toHaveBeenNthCalledWith(1, 'novel-1')
+    })
+
+    requestedNovelId.value = 'novel-2'
+
+    await vi.waitFor(() => {
+      expect(loadNovelIfNeeded).toHaveBeenNthCalledWith(2, 'novel-2', {})
+      expect(onLoaded).toHaveBeenNthCalledWith(2, 'novel-2')
+    })
+
+    context.stop()
+  })
+
+  it('suppresses stale event data until the requested novel context becomes active', () => {
+    const novelStore = useNovelStore()
+    const requestedNovelId = shallowRef('novel-1')
+    const chapter = createChapter('novel-2')
+    const scene = createScene('novel-2', chapter.id)
+    const event = createEvent('novel-2', scene.id)
+
+    novelStore.currentNovel = createNovel('novel-2')
+    novelStore.currentChapters = [chapter]
+    novelStore.currentScenes = [scene]
+    novelStore.currentEvents = [event]
+    novelStore.isCurrentNovelContextLoaded = true
+
+    const annotation = useEventAnnotation(computed(() => requestedNovelId.value))
+
+    annotation.loadContext()
+
+    expect(annotation.novel.value).toBeNull()
+    expect(annotation.scenes.value).toEqual([])
+    expect(annotation.selectedSceneEvents.value).toEqual([])
+    expect(annotation.totalEventCount.value).toBe(0)
+
+    requestedNovelId.value = 'novel-2'
+    annotation.loadContext()
+
+    expect(annotation.novel.value?.id).toBe('novel-2')
+    expect(annotation.scenes.value).toEqual([scene])
+    expect(annotation.totalEventCount.value).toBe(1)
   })
 })
