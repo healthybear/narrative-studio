@@ -79,6 +79,9 @@ function handleOverviewJump(payload: { sceneId: string, eventId: string }) {
           <n-text v-if="selectedScene" depth="3">
             {{ chapterTitleById[selectedScene.chapterId] || '未命名章节' }}
           </n-text>
+          <n-tag v-if="selectedScene && hasUnsavedChanges" type="warning" size="small">
+            当前场景未保存
+          </n-tag>
         </n-space>
       </div>
 
@@ -181,6 +184,7 @@ function handleOverviewJump(payload: { sceneId: string, eventId: string }) {
   display: flex;
   gap: 32px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .header-actions {

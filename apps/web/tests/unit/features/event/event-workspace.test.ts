@@ -79,6 +79,18 @@ const stubs = {
       return () => h('span', slots.default?.())
     },
   }),
+  NTag: defineComponent({
+    name: 'NTag',
+    props: {
+      type: {
+        type: String,
+        default: '',
+      },
+    },
+    setup(props, { slots }) {
+      return () => h('span', { 'data-type': props.type }, slots.default?.())
+    },
+  }),
 }
 
 function createNovel(): NovelProject {
@@ -183,5 +195,51 @@ describe('event workspace', () => {
     expect(wrapper.emitted('jumpToEvent')).toEqual([
       [overviewJumpPayload],
     ])
+  })
+
+  it('shows a header-level unsaved cue for the current scene', () => {
+    const wrapper = mount(EventWorkspace, {
+      props: {
+        novel: createNovel(),
+        scenes: [createScene()],
+        selectedSceneId: 'scene-1',
+        selectedScene: createScene(),
+        selectedSceneEvents: [createEventDraft()],
+        selectedEvent: createEventDraft(),
+        overviewStats: {
+          totalEventCount: 1,
+          populatedSceneCount: 1,
+          emptySceneCount: 0,
+          typeCounts: {
+            action: 1,
+          },
+        },
+        overviewItems: [
+          {
+            eventId: 'event-1',
+            sceneId: 'scene-1',
+            chapterTitle: '第一章',
+            sceneTitle: '场景 1',
+            order: 1,
+            type: 'action',
+            title: '事件 1',
+            description: '描述',
+            source: 'manual',
+          },
+        ],
+        eventCounts: { 'scene-1': 1 },
+        chapterTitleById: { 'chapter-1': '第一章' },
+        hasUnsavedChanges: true,
+        saving: false,
+        eventTypeOptions: [
+          { label: '动作', value: 'action' },
+        ],
+      },
+      global: {
+        stubs,
+      },
+    })
+
+    expect(wrapper.text()).toContain('当前场景未保存')
   })
 })

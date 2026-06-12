@@ -169,12 +169,18 @@ const stubs = {
   }),
   EventWorkspace: defineComponent({
     name: 'EventWorkspace',
-    emits: ['jumpToEvent'],
+    emits: ['jumpToEvent', 'save'],
     setup(_, { emit }) {
-      return () => h('button', {
-        'data-testid': 'route-jump',
-        onClick: () => emit('jumpToEvent', { sceneId: 'scene-404', eventId: 'event-404' }),
-      }, 'jump')
+      return () => h('div', [
+        h('button', {
+          'data-testid': 'route-jump',
+          onClick: () => emit('jumpToEvent', { sceneId: 'scene-404', eventId: 'event-404' }),
+        }, 'jump'),
+        h('button', {
+          'data-testid': 'route-save',
+          onClick: () => emit('save'),
+        }, 'save'),
+      ])
     },
   }),
 }
@@ -211,5 +217,38 @@ describe('events route', () => {
 
     expect(jumpToEventMock).toHaveBeenCalledWith('scene-404', 'event-404')
     expect(warningMock).toHaveBeenCalledWith('未找到目标事件，请刷新后重试')
+  })
+
+  it('shows a scene-specific save success message', async () => {
+    saveSelectedSceneEventsMock.mockResolvedValueOnce([
+      { id: 'event-1' },
+      { id: 'event-2' },
+    ])
+
+    const wrapper = mount(EventsPage, {
+      global: {
+        stubs,
+      },
+    })
+
+    await wrapper.get('[data-testid="route-save"]').trigger('click')
+
+    expect(saveSelectedSceneEventsMock).toHaveBeenCalledTimes(1)
+    expect(successMock).toHaveBeenCalledWith('已保存当前场景的 2 个事件')
+  })
+
+  it('tells the user local drafts were retained when save fails', async () => {
+    saveSelectedSceneEventsMock.mockRejectedValueOnce(new Error('save failed'))
+
+    const wrapper = mount(EventsPage, {
+      global: {
+        stubs,
+      },
+    })
+
+    await wrapper.get('[data-testid="route-save"]').trigger('click')
+
+    expect(saveSelectedSceneEventsMock).toHaveBeenCalledTimes(1)
+    expect(errorMock).toHaveBeenCalledWith('保存失败，本地草稿已保留')
   })
 })

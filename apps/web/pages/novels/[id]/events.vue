@@ -84,10 +84,10 @@ const eventTypeOptions = [
 async function handleSave() {
   try {
     const records = await saveSelectedSceneEvents()
-    message.success(`已保存 ${records.length} 个事件`)
+    message.success(`已保存当前场景的 ${records.length} 个事件`)
   }
   catch {
-    message.error('保存失败')
+    message.error('保存失败，本地草稿已保留')
   }
 }
 
