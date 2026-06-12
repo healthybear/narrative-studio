@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import EventDetailPanel from '~/features/event/components/EventDetailPanel.vue'
+import EventListPanel from '~/features/event/components/EventListPanel.vue'
+import EventSceneList from '~/features/event/components/EventSceneList.vue'
 import type { NovelProject, SceneRecord, EventDraft } from '~/features/novel/types/novel'
 
 /**

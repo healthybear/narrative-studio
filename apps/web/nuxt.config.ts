@@ -37,12 +37,9 @@ export default defineNuxtConfig({
 
   components: [
     {
-      path: '~/components',
-      extensions: ['vue'],
-      pathPrefix: false,
-    },
-    {
-      path: '~/features',
+      // Keep auto-registration limited to the app shell so feature edits do not
+      // expand cold-start and HMR invalidation scope across the whole workspace.
+      path: '~/components/app',
       extensions: ['vue'],
       pathPrefix: false,
     },
