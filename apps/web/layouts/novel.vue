@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, h, onMounted } from 'vue'
+import { computed, h } from 'vue'
 import { NIcon } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 import {
@@ -81,11 +81,6 @@ function handleMenuSelect(key: string) {
   void router.push(`/novels/${novelId.value}/${key}`)
 }
 
-onMounted(async () => {
-  if (novelId.value) {
-    await novelStore.loadNovel(novelId.value)
-  }
-})
 </script>
 
 <template>

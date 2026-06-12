@@ -3,15 +3,14 @@ import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import ProjectActivityFeed from '~/features/novel/components/ProjectActivityFeed.vue'
+import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelProjectStore } from '~/features/novel/stores/project'
-import { useNovelStore } from '~/features/novel/stores/novel'
 import type { NovelProjectStats } from '~/features/novel/types/novel'
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const projectStore = useNovelProjectStore()
-const novelStore = useNovelStore()
 
 const supportedModules = ['content', 'structure', 'events', 'characters', 'emotions', 'perspective', 'analysis'] as const
 
@@ -64,6 +63,7 @@ const moduleMeta: Record<ModuleKey, { title: string, description: string, hint: 
 
 const projectId = computed(() => route.params.id as string)
 const rawModule = computed(() => route.params.module as string)
+const { loadNovelWorkspaceContext } = useNovelWorkspaceContext(projectId)
 const moduleKey = computed(() => rawModule.value as ModuleKey)
 const isSupportedModule = computed(() => supportedModules.includes(moduleKey.value))
 const project = computed(() => projectStore.projects.find(item => item.id === projectId.value))
@@ -82,7 +82,7 @@ onMounted(async () => {
     await Promise.all([
       projectStore.loadProjects(),
       projectStore.loadProjectActivities(projectId.value),
-      novelStore.loadNovel(projectId.value),
+      loadNovelWorkspaceContext(),
     ])
 
     if (!project.value) {

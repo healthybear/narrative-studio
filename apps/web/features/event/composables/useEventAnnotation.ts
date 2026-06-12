@@ -8,7 +8,7 @@ import {
   toEventDrafts,
 } from '~/features/event/utils/event-annotation'
 
-export function useEventAnnotation(novelId: string) {
+export function useEventAnnotation(_novelId: string) {
   const novelStore = useNovelStore()
   const selectedSceneId = ref('')
   const selectedEventId = ref('')
@@ -149,8 +149,7 @@ export function useEventAnnotation(novelId: string) {
     return records
   }
 
-  async function loadContext() {
-    await novelStore.loadNovel(novelId)
+  function loadContext() {
     syncEventDrafts()
     ensureSelection()
   }

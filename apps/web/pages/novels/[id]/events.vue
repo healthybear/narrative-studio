@@ -3,6 +3,7 @@ import { computed, onMounted } from "vue"
 import { useMessage } from "naive-ui"
 import { useRoute, useRouter } from "vue-router"
 import { useEventAnnotation } from "~/features/event/composables/useEventAnnotation"
+import { useNovelWorkspaceContext } from "~/features/novel/composables/useNovelWorkspaceContext"
 import { useNovelProjectStore } from "~/features/novel/stores/project"
 
 /**
@@ -19,6 +20,7 @@ const message = useMessage()
 const projectStore = useNovelProjectStore()
 
 const novelId = computed(() => route.params.id as string)
+const { loadNovelWorkspaceContext } = useNovelWorkspaceContext(novelId)
 
 const {
   novel,
@@ -94,6 +96,7 @@ function handleUpdateField(payload: { eventId: string; field: "title" | "type" |
 
 async function initialize() {
   try {
+    await loadNovelWorkspaceContext()
     await loadContext()
     await projectStore.markModuleEntered(novelId.value, "events")
   }

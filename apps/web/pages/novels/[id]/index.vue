@@ -5,21 +5,21 @@ import { useMessage } from 'naive-ui'
 import ProjectActivityFeed from '~/features/novel/components/ProjectActivityFeed.vue'
 import ProjectFormDrawer from '~/features/novel/components/ProjectFormDrawer.vue'
 import ProjectOverviewHero from '~/features/novel/components/ProjectOverviewHero.vue'
+import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelProjectStore } from '~/features/novel/stores/project'
-import { useNovelStore } from '~/features/novel/stores/novel'
 import type { FormData } from '~/features/novel/components/ProjectFormDrawer.vue'
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const projectStore = useNovelProjectStore()
-const novelStore = useNovelStore()
 
 const showFormDrawer = ref(false)
 const submittingForm = ref(false)
 const loading = ref(true)
 
 const projectId = computed(() => route.params.id as string)
+const { loadNovelWorkspaceContext } = useNovelWorkspaceContext(projectId)
 const project = computed(() => projectStore.projects.find(item => item.id === projectId.value))
 const stats = computed(() => projectStore.statsById[projectId.value])
 const activities = computed(() => projectStore.activityById[projectId.value] || [])
@@ -74,7 +74,7 @@ onMounted(async () => {
     await Promise.all([
       projectStore.loadProjects(),
       projectStore.loadProjectActivities(projectId.value),
-      novelStore.loadNovel(projectId.value),
+      loadNovelWorkspaceContext(),
     ])
 
     if (!project.value) {
@@ -116,7 +116,7 @@ async function handleFormSubmit(data: FormData) {
       tags,
       targetWordCount: data.targetWordCount,
     })
-    await novelStore.loadNovel(projectId.value)
+    await loadNovelWorkspaceContext({ force: true })
     message.success('项目已更新')
     showFormDrawer.value = false
   }

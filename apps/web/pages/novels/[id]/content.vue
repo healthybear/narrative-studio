@@ -3,6 +3,7 @@ import { computed, onMounted, shallowRef } from 'vue'
 import { useMessage } from 'naive-ui'
 import ContentWorkspace from '~/features/novel/components/content/ContentWorkspace.vue'
 import { useContentWorkspace } from '~/features/novel/composables/useContentWorkspace'
+import { useNovelWorkspaceContext } from '~/features/novel/composables/useNovelWorkspaceContext'
 import { useNovelStore } from '~/features/novel/stores/novel'
 import { useNovelProjectStore } from '~/features/novel/stores/project'
 
@@ -18,7 +19,13 @@ const savingScenes = shallowRef(false)
 const workspace = shallowRef<ReturnType<typeof useContentWorkspace> | null>(null)
 
 const novelId = computed(() => route.params.id as string)
-const projectTitle = computed(() => novelStore.currentNovel?.title || '内容工作台')
+const {
+  chapters,
+  loadNovelWorkspaceContext,
+  novel,
+  scenes,
+} = useNovelWorkspaceContext(novelId)
+const projectTitle = computed(() => novel.value?.title || '内容工作台')
 const activeChapter = computed(() => workspace.value?.selectedChapter.value || null)
 const activeScenes = computed(() => {
   const instance = workspace.value
@@ -32,34 +39,34 @@ const activeScenes = computed(() => {
 
 async function hydrateWorkspace() {
   await Promise.all([
-    novelStore.loadNovel(novelId.value),
+    loadNovelWorkspaceContext(),
     projectStore.markModuleEntered(novelId.value, 'content'),
   ])
 
-  if (!novelStore.currentNovel) {
+  if (!novel.value) {
     message.error('项目不存在')
     void router.replace('/novels')
     return
   }
 
   workspace.value = useContentWorkspace({
-    novel: novelStore.currentNovel,
-    chapters: novelStore.currentChapters,
-    scenes: novelStore.currentScenes,
+    novel: novel.value,
+    chapters: chapters.value,
+    scenes: scenes.value,
   })
 }
 
 async function reloadWorkspace() {
-  await novelStore.loadNovel(novelId.value)
+  await loadNovelWorkspaceContext({ force: true })
 
-  if (!novelStore.currentNovel) {
+  if (!novel.value) {
     return
   }
 
   workspace.value?.resetFromPersistedData(
-    novelStore.currentNovel,
-    novelStore.currentChapters,
-    novelStore.currentScenes,
+    novel.value,
+    chapters.value,
+    scenes.value,
   )
 }
 
