@@ -1,121 +1,145 @@
 <script setup lang="ts">
 import EventDetailPanel from '~/features/event/components/EventDetailPanel.vue'
 import EventListPanel from '~/features/event/components/EventListPanel.vue'
+import EventOverviewPanel from '~/features/event/components/EventOverviewPanel.vue'
 import EventSceneList from '~/features/event/components/EventSceneList.vue'
 import type { NovelProject, SceneRecord, EventDraft } from '~/features/novel/types/novel'
 
-/**
- * 事件工作区展示容器
- * 纯展示组件，所有状态和逻辑由父组件管理
- */
-defineProps<{
+interface EventOverviewStats {
+  totalEventCount: number
+  populatedSceneCount: number
+  emptySceneCount: number
+  typeCounts: Record<string, number>
+}
+
+interface EventOverviewItem {
+  eventId: string
+  sceneId: string
+  chapterTitle: string
+  sceneTitle: string
+  order: number
+  type: string
+  title: string
+  description: string
+  source: EventDraft['source']
+}
+
+const props = defineProps<{
   novel: NovelProject | null
   scenes: SceneRecord[]
   selectedSceneId: string
   selectedScene: SceneRecord | null
   selectedSceneEvents: EventDraft[]
   selectedEvent: EventDraft | null
+  overviewStats: EventOverviewStats
+  overviewItems: EventOverviewItem[]
   eventCounts: Record<string, number>
   chapterTitleById: Record<string, string>
   saving: boolean
   eventTypeOptions: Array<{ label: string; value: string }>
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   selectScene: [sceneId: string]
   selectEvent: [eventId: string]
+  jumpToEvent: [payload: { sceneId: string, eventId: string }]
   addEvent: []
   removeEvent: [eventId: string]
   updateEventField: [payload: { eventId: string; field: 'title' | 'type' | 'description'; value: string | null }]
   save: []
   autoDetect: []
 }>()
+
+function handleOverviewJump(payload: { sceneId: string, eventId: string }) {
+  emit('jumpToEvent', payload)
+}
 </script>
 
 <template>
   <div class="event-workspace">
-    <!-- 总览头部 -->
+    <EventOverviewPanel
+      :stats="overviewStats"
+      :items="overviewItems"
+      @jump-to-event="handleOverviewJump"
+    />
+
     <div class="workspace-header">
       <div class="header-info">
-        <h2 class="workspace-title">{{ novel?.title || '事件标注' }}</h2>
+        <h2 class="workspace-title">{{ novel?.title || '�¼���ע' }}</h2>
         <n-space class="header-stats">
-          <n-statistic label="总场景数" :value="scenes.length" />
-          <n-statistic label="总事件数" :value="Object.values(eventCounts).reduce((sum, count) => sum + count, 0)" />
+          <n-statistic label="�ܳ�����" :value="scenes.length" />
+          <n-statistic label="���¼���" :value="overviewStats.totalEventCount" />
           <n-statistic
             v-if="selectedScene"
-            label="当前场景事件"
+            label="��ǰ�����¼�"
             :value="selectedSceneEvents.length"
           />
           <n-text v-if="selectedScene" depth="3">
-            {{ chapterTitleById[selectedScene.chapterId] || '未命名章节' }}
+            {{ chapterTitleById[selectedScene.chapterId] || 'δ�����½�' }}
           </n-text>
         </n-space>
       </div>
 
       <n-space class="header-actions">
-        <n-button :disabled="!selectedScene" @click="$emit('autoDetect')">
+        <n-button :disabled="!selectedScene" @click="emit('autoDetect')">
           <template #icon>
             <n-icon><i-carbon-flash /></n-icon>
           </template>
-          AI 检测
+          AI ���
         </n-button>
 
-        <n-button :disabled="!selectedScene" @click="$emit('addEvent')">
+        <n-button :disabled="!selectedScene" @click="emit('addEvent')">
           <template #icon>
             <n-icon><i-carbon-add /></n-icon>
           </template>
-          新增事件
+          �����¼�
         </n-button>
 
         <n-button
           type="primary"
           :loading="saving"
           :disabled="!selectedScene"
-          @click="$emit('save')"
+          @click="emit('save')"
         >
           <template #icon>
             <n-icon><i-carbon-save /></n-icon>
           </template>
-          保存当前场景
+          ���浱ǰ����
         </n-button>
       </n-space>
     </div>
 
-    <!-- 三栏布局 -->
     <div class="workspace-content">
-      <!-- 场景导航面板 -->
       <div class="workspace-panel workspace-panel--scenes">
         <EventSceneList
-          :scenes="scenes"
+          :scenes="props.scenes"
           :selected-scene-id="selectedSceneId"
           :event-counts="eventCounts"
           :chapter-title-by-id="chapterTitleById"
-          @select="$emit('selectScene', $event)"
+          @select="emit('selectScene', $event)"
         />
       </div>
 
-      <!-- 事件列表面板 -->
       <div class="workspace-panel workspace-panel--events">
         <EventListPanel
           :selected-scene="selectedScene"
           :events="selectedSceneEvents"
           :selected-event-id="selectedEvent?.id || ''"
           :event-type-options="eventTypeOptions"
-          @select-event="$emit('selectEvent', $event)"
-          @add-event="$emit('addEvent')"
-          @remove-event="$emit('removeEvent', $event)"
+          @select-event="emit('selectEvent', $event)"
+          @add-event="emit('addEvent')"
+          @remove-event="emit('removeEvent', $event)"
         />
       </div>
 
-      <!-- 事件详情面板 -->
       <div class="workspace-panel workspace-panel--detail">
         <EventDetailPanel
           :scene="selectedScene"
           :selected-event="selectedEvent"
           :saving="saving"
           :event-type-options="eventTypeOptions"
-          @update-field="$emit('updateEventField', $event)"
-          @remove-event="$emit('removeEvent', $event)"
+          @update-field="emit('updateEventField', $event)"
+          @remove-event="emit('removeEvent', $event)"
         />
       </div>
     </div>

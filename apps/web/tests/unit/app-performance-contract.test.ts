@@ -47,7 +47,8 @@ describe('app performance contract', () => {
       .split('\n')
       .filter(line => line.startsWith('import Event'))
 
-    expect(importLines).toHaveLength(3)
+    expect(importLines).toHaveLength(4)
+    expect(importLines.join('\n')).toContain("EventOverviewPanel from '~/features/event/components/EventOverviewPanel.vue'")
     expect(importLines.join('\n')).toContain("EventSceneList from '~/features/event/components/EventSceneList.vue'")
     expect(importLines.join('\n')).toContain("EventListPanel from '~/features/event/components/EventListPanel.vue'")
     expect(importLines.join('\n')).toContain("EventDetailPanel from '~/features/event/components/EventDetailPanel.vue'")

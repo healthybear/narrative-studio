@@ -20,6 +20,8 @@ const {
   novel,
   novelStore,
   scenes,
+  allEventItems,
+  overviewStats,
   selectedSceneId,
   selectedScene,
   selectedSceneEvents,
@@ -27,6 +29,7 @@ const {
   loadContext,
   selectScene,
   selectEvent,
+  jumpToEvent,
   addEvent,
   removeEvent,
   updateEventField,
@@ -109,6 +112,12 @@ function handleRemoveEvent(eventId: string) {
 function handleUpdateField(payload: { eventId: string, field: 'title' | 'type' | 'description', value: string | null }) {
   updateEventField(payload.eventId, payload.field, payload.value)
 }
+
+function handleJumpToEvent(payload: { sceneId: string, eventId: string }) {
+  if (!jumpToEvent(payload.sceneId, payload.eventId)) {
+    message.warning('未找到目标事件，请刷新后重试')
+  }
+}
 </script>
 
 <template>
@@ -140,6 +149,8 @@ function handleUpdateField(payload: { eventId: string, field: 'title' | 'type' |
       v-else-if="hasActiveContext && novel"
       :novel="novel"
       :scenes="scenes"
+      :overview-items="allEventItems"
+      :overview-stats="overviewStats"
       :selected-scene-id="selectedSceneId"
       :selected-scene="selectedScene"
       :selected-scene-events="selectedSceneEvents"
@@ -150,6 +161,7 @@ function handleUpdateField(payload: { eventId: string, field: 'title' | 'type' |
       :event-type-options="eventTypeOptions"
       @select-scene="selectScene"
       @select-event="selectEvent"
+      @jump-to-event="handleJumpToEvent"
       @add-event="handleAddEvent"
       @remove-event="handleRemoveEvent"
       @update-event-field="handleUpdateField"
