@@ -16,6 +16,7 @@ const projectStore = useNovelProjectStore()
 const novelStore = useNovelStore()
 
 const showFormDrawer = ref(false)
+const submittingForm = ref(false)
 const loading = ref(true)
 
 const projectId = computed(() => route.params.id as string)
@@ -102,6 +103,8 @@ async function handleFormSubmit(data: FormData) {
     .map(tag => tag.trim())
     .filter(Boolean)
 
+  submittingForm.value = true
+
   try {
     await projectStore.updateProject(projectId.value, {
       title: data.title,
@@ -115,9 +118,13 @@ async function handleFormSubmit(data: FormData) {
     })
     await novelStore.loadNovel(projectId.value)
     message.success('项目已更新')
+    showFormDrawer.value = false
   }
   catch {
     message.error('更新项目失败')
+  }
+  finally {
+    submittingForm.value = false
   }
 }
 
@@ -179,6 +186,7 @@ function goToModule(module: string) {
 
       <ProjectFormDrawer
         v-model:show="showFormDrawer"
+        :submitting="submittingForm"
         :project="project"
         @submit="handleFormSubmit"
       />

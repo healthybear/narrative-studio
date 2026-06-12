@@ -51,5 +51,6 @@ describe('novel project store', () => {
     const activityTypes = (await listNovelProjectActivities(project.id)).map(item => item.type)
     expect(activityTypes).toContain('module_entered')
     expect(activityTypes).not.toContain('project_updated')
+    expect(store.statsById[project.id]?.lastActivityText).toBe('进入章节内容')
   })
 })

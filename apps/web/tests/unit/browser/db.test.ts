@@ -2,11 +2,13 @@
 import {
   closeDB,
   createNovelProject,
+  createNovelProjectMeta,
   deleteNovelProject,
   exportNovelProject,
   getDB,
   getNovelProject,
   getNovelProjectBundle,
+  getNovelProjectStats,
   initializeScenesFromChapters,
   listEventsByNovel,
   listEventsByScene,
@@ -128,9 +130,15 @@ describe('database schema and project crud', () => {
   })
 
   it('saves events by scene, keeps order, and replaces previous scene events', async () => {
-    const project = await createNovelProject({
+    const project = await createNovelProjectMeta({
       title: 'Event Project',
-      rawText: 'Chapter 1\nAlpha\nChapter 2\nBeta',
+      summary: '',
+      logline: '',
+      genre: '',
+      perspective: '',
+      era: '',
+      tags: [],
+      targetWordCount: null,
     })
 
     const [firstChapter] = await saveChapters(project.id, [
@@ -181,6 +189,9 @@ describe('database schema and project crud', () => {
 
     const novelEvents = await listEventsByNovel(project.id)
     expect(novelEvents).toHaveLength(2)
+    const statsAfterSave = await getNovelProjectStats(project.id)
+    expect(statsAfterSave?.eventCount).toBe(2)
+    expect(statsAfterSave?.lastActivityText).toBe('保存了 Scene 1 的 2 个事件')
 
     const replaced = await saveSceneEvents(project.id, firstScene!.id, [
       {
@@ -282,6 +293,28 @@ describe('database schema and project crud', () => {
     ])
 
     await expect(listEventsByNovel(project.id)).resolves.toHaveLength(0)
+  })
+
+  it('updates project stats activity text when chapters are saved', async () => {
+    const project = await createNovelProjectMeta({
+      title: 'Activity Project',
+      summary: '',
+      logline: '',
+      genre: '',
+      perspective: '',
+      era: '',
+      tags: [],
+      targetWordCount: null,
+    })
+
+    await saveChapters(project.id, [
+      { title: '第一章', content: '内容一', startOffset: 0, endOffset: 3, order: 1 },
+      { title: '第二章', content: '内容二', startOffset: 4, endOffset: 7, order: 2 },
+    ])
+
+    const stats = await getNovelProjectStats(project.id)
+    expect(stats?.chapterCount).toBe(2)
+    expect(stats?.lastActivityText).toBe('保存了 2 个章节')
   })
 
   it('throws when exporting a missing project', async () => {

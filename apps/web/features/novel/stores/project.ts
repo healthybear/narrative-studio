@@ -296,12 +296,14 @@ export const useNovelProjectStore = defineStore('novel-project', {
           return
         }
 
+        let lastActivityText = stats.lastActivityText
         if (stats.lastActiveModule !== module) {
           const activity = await recordNovelProjectActivity({
             novelId,
             type: 'module_entered',
             text: `进入${this.getModuleName(module)}`,
           })
+          lastActivityText = activity.text
 
           if (this.activityById[novelId]) {
             this.activityById[novelId] = [activity, ...this.activityById[novelId]]
@@ -312,6 +314,7 @@ export const useNovelProjectStore = defineStore('novel-project', {
         const updatedStats: NovelProjectStats = {
           ...stats,
           lastActiveModule: module,
+          lastActivityText,
           updatedAt: now,
         }
 

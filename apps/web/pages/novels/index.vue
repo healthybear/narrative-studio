@@ -13,6 +13,7 @@ const message = useMessage()
 const projectStore = useNovelProjectStore()
 
 const showFormDrawer = ref(false)
+const submittingForm = ref(false)
 const editingProject = ref<typeof projectStore.projects[number] | null>(null)
 
 onMounted(async () => {
@@ -58,6 +59,8 @@ async function handleFormSubmit(data: FormData) {
     .map(tag => tag.trim())
     .filter(Boolean)
 
+  submittingForm.value = true
+
   try {
     if (editingProject.value) {
       await projectStore.updateProject(editingProject.value.id, {
@@ -92,6 +95,9 @@ async function handleFormSubmit(data: FormData) {
   }
   catch {
     message.error(editingProject.value ? '更新项目失败' : '创建项目失败')
+  }
+  finally {
+    submittingForm.value = false
   }
 }
 
@@ -210,6 +216,7 @@ const getEmptyDescription = () => {
 
     <ProjectFormDrawer
       v-model:show="showFormDrawer"
+      :submitting="submittingForm"
       :project="editingProject"
       @submit="handleFormSubmit"
     />

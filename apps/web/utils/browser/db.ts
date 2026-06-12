@@ -765,7 +765,7 @@ export async function saveSceneEvents(
 
   await tx.done
 
-  // 同步更新统计和活动记录
+  // 同步更新统计数据，活动摘要由 recordNovelProjectActivity 统一回写。
   const allEvents = await listEventsByNovel(novelId)
   const pendingCount = allEvents.filter(e => e.suggestionStatus === 'pending').length
 
@@ -1039,6 +1039,16 @@ export async function recordNovelProjectActivity(input: {
   }
 
   await db.put('novel_project_activity', activity)
+
+  const stats = await db.get('novel_project_stats', input.novelId)
+  if (stats) {
+    await db.put('novel_project_stats', {
+      ...stats,
+      lastActivityText: input.text,
+      updatedAt: now,
+    })
+  }
+
   return activity
 }
 
@@ -1116,6 +1126,5 @@ export async function deleteNovelProject(id: string) {
   await tx.objectStore('novels').delete(id)
   await tx.done
 }
-
 
 

@@ -1,10 +1,11 @@
 ﻿<script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import type { NovelProjectMeta } from '~/features/novel/types/novel'
 
 const props = defineProps<{
   show: boolean
+  submitting?: boolean
   project?: NovelProjectMeta | null
 }>()
 
@@ -25,7 +26,8 @@ export interface FormData {
 }
 
 const formRef = ref<FormInst | null>(null)
-const loading = ref(false)
+const submitRequested = ref(false)
+const externalSubmitStarted = ref(false)
 
 const formValue = reactive<FormData>({
   title: '',
@@ -68,6 +70,8 @@ function hydrateForm(project?: NovelProjectMeta | null) {
   formValue.targetWordCount = project?.targetWordCount ?? null
 }
 
+const isSubmitting = computed(() => submitRequested.value || Boolean(props.submitting))
+
 watch(
   () => [props.show, props.project] as const,
   ([show, project]) => {
@@ -77,23 +81,42 @@ watch(
     }
 
     hydrateForm(null)
+    submitRequested.value = false
+    externalSubmitStarted.value = false
     formRef.value?.restoreValidation()
   },
   { immediate: true }
 )
 
+watch(
+  () => props.submitting,
+  (submitting) => {
+    if (submitting) {
+      externalSubmitStarted.value = true
+      submitRequested.value = false
+      return
+    }
+
+    if (externalSubmitStarted.value) {
+      externalSubmitStarted.value = false
+      submitRequested.value = false
+    }
+  }
+)
+
 const handleSubmit = async () => {
+  if (isSubmitting.value) {
+    return
+  }
+
   try {
     await formRef.value?.validate()
-    loading.value = true
-
+    submitRequested.value = true
     emit('submit', { ...formValue })
   }
   catch (error) {
+    submitRequested.value = false
     console.error('表单校验失败:', error)
-  }
-  finally {
-    loading.value = false
   }
 }
 </script>
@@ -192,7 +215,7 @@ const handleSubmit = async () => {
           <n-button @click="emit('update:show', false)">
             取消
           </n-button>
-          <n-button type="primary" :loading="loading" @click="handleSubmit">
+          <n-button type="primary" :loading="isSubmitting" :disabled="isSubmitting" @click="handleSubmit">
             {{ props.project ? '保存修改' : '创建项目' }}
           </n-button>
         </div>
