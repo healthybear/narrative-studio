@@ -1,13 +1,18 @@
-﻿<script setup lang="ts">
-import { onMounted, ref } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import ProjectCaseCard from '~/features/novel/components/ProjectCaseCard.vue'
 import ProjectFilterBar from '~/features/novel/components/ProjectFilterBar.vue'
 import ProjectFormDrawer from '~/features/novel/components/ProjectFormDrawer.vue'
+import {
+  getPostCreateRoute,
+  normalizeRequestedModule,
+} from '~/features/novel/utils/navigation'
 import { useNovelProjectStore } from '~/features/novel/stores/project'
 import type { FormData } from '~/features/novel/components/ProjectFormDrawer.vue'
 
+const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const projectStore = useNovelProjectStore()
@@ -15,10 +20,15 @@ const projectStore = useNovelProjectStore()
 const showFormDrawer = ref(false)
 const submittingForm = ref(false)
 const editingProject = ref<typeof projectStore.projects[number] | null>(null)
+const requestedModule = computed(() => normalizeRequestedModule(route.query.module))
 
 onMounted(async () => {
   try {
     await projectStore.loadProjects()
+
+    if (route.query.create === '1') {
+      openCreateDrawer()
+    }
   }
   catch {
     message.error('加载项目列表失败')
@@ -91,7 +101,7 @@ async function handleFormSubmit(data: FormData) {
 
     message.success('项目已创建')
     showFormDrawer.value = false
-    void router.push(`/novels/${project.id}`)
+    void router.push(getPostCreateRoute(project.id, requestedModule.value))
   }
   catch {
     message.error(editingProject.value ? '更新项目失败' : '创建项目失败')
@@ -198,6 +208,11 @@ const getEmptyDescription = () => {
     >
       <template #icon>
         <n-icon><i-carbon-document-blank /></n-icon>
+      </template>
+      <template #extra>
+        <n-button type="primary" @click="openCreateDrawer">
+          创建第一个项目
+        </n-button>
       </template>
     </n-empty>
 
