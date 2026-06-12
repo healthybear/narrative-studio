@@ -100,6 +100,11 @@ export const useNovelStore = defineStore('novel', {
       this.lastError = ''
     },
 
+    // Empty chapter, scene, and event arrays are valid for a loaded novel, so the active novel id is the cache signal.
+    hasLoadedNovelContext(id: string) {
+      return this.currentNovel?.id === id
+    },
+
     async loadNovels() {
       this.loading = true
       this.clearError()
@@ -150,6 +155,14 @@ export const useNovelStore = defineStore('novel', {
       } finally {
         this.loading = false
       }
+    },
+
+    async loadNovelIfNeeded(id: string, options: { force?: boolean } = {}) {
+      if (!options.force && this.hasLoadedNovelContext(id)) {
+        return this.currentNovel
+      }
+
+      return this.loadNovel(id)
     },
 
     async createNovel(data: CreateNovelInput) {
