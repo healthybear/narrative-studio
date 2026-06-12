@@ -1,4 +1,4 @@
-﻿import { mount } from '@vue/test-utils'
+import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import { describe, expect, it } from 'vitest'
 import EventDetailPanel from '~/features/event/components/EventDetailPanel.vue'
@@ -267,7 +267,7 @@ describe('event editor panels', () => {
     expect(wrapper.text()).toContain('也可以先创建一个新事件')
   })
 
-  it('surfaces empty-scene status and the current-scene save cue in the scene list', () => {
+  it('surfaces empty-scene status and the unsaved cue for a dirty selected scene', () => {
     const wrapper = mount(EventSceneList, {
       props: {
         scenes: [
@@ -288,6 +288,7 @@ describe('event editor panels', () => {
           'chapter-1': '第一章',
           'chapter-2': '第二章',
         },
+        hasUnsavedChanges: true,
       },
       global: {
         stubs,
@@ -300,6 +301,38 @@ describe('event editor panels', () => {
     expect(wrapper.text()).toContain('AI 场景')
   })
 
+  it('hides the unsaved cue when the selected scene is clean', () => {
+    const wrapper = mount(EventSceneList, {
+      props: {
+        scenes: [
+          createScene(),
+          createScene({
+            id: 'scene-2',
+            chapterId: 'chapter-2',
+            title: '车站重逢',
+            source: 'ai',
+          }),
+        ],
+        selectedSceneId: 'scene-1',
+        eventCounts: {
+          'scene-1': 0,
+          'scene-2': 2,
+        },
+        chapterTitleById: {
+          'chapter-1': '第一章',
+          'chapter-2': '第二章',
+        },
+        hasUnsavedChanges: false,
+      },
+      global: {
+        stubs,
+      },
+    })
+
+    expect(wrapper.text()).toContain('当前编辑')
+    expect(wrapper.text()).not.toContain('修改后记得保存当前场景')
+  })
+
   it('shows focused empty-state guidance when there are no scenes to annotate yet', () => {
     const wrapper = mount(EventSceneList, {
       props: {
@@ -307,6 +340,7 @@ describe('event editor panels', () => {
         selectedSceneId: '',
         eventCounts: {},
         chapterTitleById: {},
+        hasUnsavedChanges: false,
       },
       global: {
         stubs,

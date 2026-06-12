@@ -84,7 +84,7 @@ const stubs = {
 function createNovel(): NovelProject {
   return {
     id: 'novel-1',
-    title: '²âÊÔĞ¡Ëµ',
+    title: 'æµ‹è¯•å°è¯´',
     summary: '',
     logline: '',
     genre: '',
@@ -109,8 +109,8 @@ function createScene(): SceneRecord {
     id: 'scene-1',
     novelId: 'novel-1',
     chapterId: 'chapter-1',
-    title: '³¡¾° 1',
-    content: 'ÄÚÈİ',
+    title: 'åœºæ™¯ 1',
+    content: 'å†…å®¹',
     order: 1,
     wordCount: 120,
     startOffset: 0,
@@ -128,8 +128,8 @@ function createEventDraft(): EventDraft {
     sceneId: 'scene-1',
     order: 1,
     type: 'action',
-    title: 'ÊÂ¼ş 1',
-    description: 'ÃèÊö',
+    title: 'äº‹ä»¶ 1',
+    description: 'æè¿°',
     source: 'manual',
   }
 }
@@ -156,20 +156,21 @@ describe('event workspace', () => {
           {
             eventId: 'event-1',
             sceneId: 'scene-1',
-            chapterTitle: 'µÚÒ»ÕÂ',
-            sceneTitle: '³¡¾° 1',
+            chapterTitle: 'ç¬¬ä¸€ç« ',
+            sceneTitle: 'åœºæ™¯ 1',
             order: 1,
             type: 'action',
-            title: 'ÊÂ¼ş 1',
-            description: 'ÃèÊö',
+            title: 'äº‹ä»¶ 1',
+            description: 'æè¿°',
             source: 'manual',
           },
         ],
         eventCounts: { 'scene-1': 1 },
-        chapterTitleById: { 'chapter-1': 'µÚÒ»ÕÂ' },
+        chapterTitleById: { 'chapter-1': 'ç¬¬ä¸€ç« ' },
+        hasUnsavedChanges: false,
         saving: false,
         eventTypeOptions: [
-          { label: '¶¯×÷', value: 'action' },
+          { label: 'åŠ¨ä½œ', value: 'action' },
         ],
       },
       global: {

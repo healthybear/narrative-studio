@@ -3,7 +3,7 @@ import EventDetailPanel from '~/features/event/components/EventDetailPanel.vue'
 import EventListPanel from '~/features/event/components/EventListPanel.vue'
 import EventOverviewPanel from '~/features/event/components/EventOverviewPanel.vue'
 import EventSceneList from '~/features/event/components/EventSceneList.vue'
-import type { NovelProject, SceneRecord, EventDraft } from '~/features/novel/types/novel'
+import type { EventDraft, NovelProject, SceneRecord } from '~/features/novel/types/novel'
 
 interface EventOverviewStats {
   totalEventCount: number
@@ -35,6 +35,7 @@ const props = defineProps<{
   overviewItems: EventOverviewItem[]
   eventCounts: Record<string, number>
   chapterTitleById: Record<string, string>
+  hasUnsavedChanges: boolean
   saving: boolean
   eventTypeOptions: Array<{ label: string; value: string }>
 }>()
@@ -66,17 +67,17 @@ function handleOverviewJump(payload: { sceneId: string, eventId: string }) {
 
     <div class="workspace-header">
       <div class="header-info">
-        <h2 class="workspace-title">{{ novel?.title || 'ÊÂ¼ş±ê×¢' }}</h2>
+        <h2 class="workspace-title">{{ novel?.title || 'äº‹ä»¶æ ‡æ³¨' }}</h2>
         <n-space class="header-stats">
-          <n-statistic label="×Ü³¡¾°Êı" :value="scenes.length" />
-          <n-statistic label="×ÜÊÂ¼şÊı" :value="overviewStats.totalEventCount" />
+          <n-statistic label="æ€»åœºæ™¯æ•°" :value="scenes.length" />
+          <n-statistic label="æ€»äº‹ä»¶æ•°" :value="overviewStats.totalEventCount" />
           <n-statistic
             v-if="selectedScene"
-            label="µ±Ç°³¡¾°ÊÂ¼ş"
+            label="å½“å‰åœºæ™¯äº‹ä»¶"
             :value="selectedSceneEvents.length"
           />
           <n-text v-if="selectedScene" depth="3">
-            {{ chapterTitleById[selectedScene.chapterId] || 'Î´ÃüÃûÕÂ½Ú' }}
+            {{ chapterTitleById[selectedScene.chapterId] || 'æœªå‘½åç« èŠ‚' }}
           </n-text>
         </n-space>
       </div>
@@ -86,14 +87,14 @@ function handleOverviewJump(payload: { sceneId: string, eventId: string }) {
           <template #icon>
             <n-icon><i-carbon-flash /></n-icon>
           </template>
-          AI ¼ì²â
+          AI æ£€æµ‹
         </n-button>
 
         <n-button :disabled="!selectedScene" @click="emit('addEvent')">
           <template #icon>
             <n-icon><i-carbon-add /></n-icon>
           </template>
-          ĞÂÔöÊÂ¼ş
+          æ–°å¢äº‹ä»¶
         </n-button>
 
         <n-button
@@ -105,7 +106,7 @@ function handleOverviewJump(payload: { sceneId: string, eventId: string }) {
           <template #icon>
             <n-icon><i-carbon-save /></n-icon>
           </template>
-          ±£´æµ±Ç°³¡¾°
+          ä¿å­˜å½“å‰åœºæ™¯
         </n-button>
       </n-space>
     </div>
@@ -117,6 +118,7 @@ function handleOverviewJump(payload: { sceneId: string, eventId: string }) {
           :selected-scene-id="selectedSceneId"
           :event-counts="eventCounts"
           :chapter-title-by-id="chapterTitleById"
+          :has-unsaved-changes="hasUnsavedChanges"
           @select="emit('selectScene', $event)"
         />
       </div>

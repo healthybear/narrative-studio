@@ -26,6 +26,7 @@ const {
   selectedScene,
   selectedSceneEvents,
   selectedEvent,
+  hasUnsavedChanges,
   loadContext,
   selectScene,
   selectEvent,
@@ -46,12 +47,12 @@ const { hasActiveContext } = watchNovelWorkspaceContext(novelId, {
     loadContext()
 
     if (!novel.value) {
-      message.error('ÏîÄ¿²»´æÔÚ')
+      message.error('é¡¹ç›®ä¸å­˜åœ¨')
       await router.push('/novels')
     }
   },
   onError: async (error) => {
-    message.error(error instanceof Error ? error.message : '¼ÓÔØÏîÄ¿Ê§°Ü')
+    message.error(error instanceof Error ? error.message : 'åŠ è½½é¡¹ç›®å¤±è´¥')
     await router.push('/novels')
   },
   onSettled: () => {
@@ -61,52 +62,52 @@ const { hasActiveContext } = watchNovelWorkspaceContext(novelId, {
 
 const chapterTitleById = computed<Record<string, string>>(() => {
   return Object.fromEntries(
-    novelStore.currentChapters.map(chapter => [chapter.id, chapter.title])
+    novelStore.currentChapters.map(chapter => [chapter.id, chapter.title]),
   )
 })
 
 const eventCounts = computed<Record<string, number>>(() => {
   return Object.fromEntries(
-    scenes.value.map(scene => [scene.id, getEventCount(scene.id)])
+    scenes.value.map(scene => [scene.id, getEventCount(scene.id)]),
   )
 })
 
 const eventTypeOptions = [
-  { label: 'ÆÌµæ', value: 'setup' },
-  { label: '³åÍ»', value: 'conflict' },
-  { label: '×ªÕÛ', value: 'turning_point' },
-  { label: '¸ß³±', value: 'climax' },
-  { label: '½â¾ö', value: 'resolution' },
-  { label: 'Óà²¨', value: 'aftermath' },
+  { label: 'é“ºå«', value: 'setup' },
+  { label: 'å†²çª', value: 'conflict' },
+  { label: 'è½¬æŠ˜', value: 'turning_point' },
+  { label: 'é«˜æ½®', value: 'climax' },
+  { label: 'è§£å†³', value: 'resolution' },
+  { label: 'ä½™æ³¢', value: 'aftermath' },
 ]
 
 async function handleSave() {
   try {
     const records = await saveSelectedSceneEvents()
-    message.success(`ÒÑ±£´æ ${records.length} ¸öÊÂ¼ş`)
+    message.success(`å·²ä¿å­˜ ${records.length} ä¸ªäº‹ä»¶`)
   }
   catch {
-    message.error('±£´æÊ§°Ü')
+    message.error('ä¿å­˜å¤±è´¥')
   }
 }
 
 function handleAutoDetect() {
-  message.info('AI ÊÂ¼ş¼ì²â¹¦ÄÜÔİÎ´½ÓÈë')
+  message.info('AI äº‹ä»¶æ£€æµ‹åŠŸèƒ½æš‚æœªæ¥å…¥')
 }
 
 function handleAddEvent() {
   if (!selectedScene.value) {
-    message.warning('ÇëÏÈÑ¡ÔñÒ»¸ö³¡¾°')
+    message.warning('è¯·å…ˆé€‰æ‹©ä¸€ä¸ªåœºæ™¯')
     return
   }
 
   addEvent()
-  message.success('ÒÑÌí¼ÓĞÂÊÂ¼ş£¬±à¼­ºó¼ÇµÃ±£´æ')
+  message.success('å·²æ·»åŠ æ–°äº‹ä»¶ï¼Œç¼–è¾‘åè®°å¾—ä¿å­˜')
 }
 
 function handleRemoveEvent(eventId: string) {
   removeEvent(eventId)
-  message.success('ÊÂ¼şÒÑÒÆ³ı£¬±£´æºó»áĞ´Èë±¾µØÊı¾İ')
+  message.success('äº‹ä»¶å·²ç§»é™¤ï¼Œä¿å­˜åä¼šå†™å…¥æœ¬åœ°æ•°æ®')
 }
 
 function handleUpdateField(payload: { eventId: string, field: 'title' | 'type' | 'description', value: string | null }) {
@@ -115,7 +116,7 @@ function handleUpdateField(payload: { eventId: string, field: 'title' | 'type' |
 
 function handleJumpToEvent(payload: { sceneId: string, eventId: string }) {
   if (!jumpToEvent(payload.sceneId, payload.eventId)) {
-    message.warning('Î´ÕÒµ½Ä¿±êÊÂ¼ş£¬ÇëË¢ĞÂºóÖØÊÔ')
+    message.warning('æœªæ‰¾åˆ°ç›®æ ‡äº‹ä»¶ï¼Œè¯·åˆ·æ–°åé‡è¯•')
   }
 }
 </script>
@@ -125,7 +126,7 @@ function handleJumpToEvent(payload: { sceneId: string, eventId: string }) {
     <n-page-header @back="router.push(`/novels/${novelId}`)">
       <template #title>
         <n-space align="center">
-          <span>ÊÂ¼ş±ê×¢</span>
+          <span>äº‹ä»¶æ ‡æ³¨</span>
           <n-tag v-if="novel" type="info">{{ novel.title }}</n-tag>
         </n-space>
       </template>
@@ -134,7 +135,7 @@ function handleJumpToEvent(payload: { sceneId: string, eventId: string }) {
     <n-alert
       v-if="novelStore.lastError"
       type="error"
-      title="´¦ÀíÊ§°Ü"
+      title="å¤„ç†å¤±è´¥"
       closable
       @close="novelStore.clearError()"
     >
@@ -157,6 +158,7 @@ function handleJumpToEvent(payload: { sceneId: string, eventId: string }) {
       :selected-event="selectedEvent"
       :event-counts="eventCounts"
       :chapter-title-by-id="chapterTitleById"
+      :has-unsaved-changes="hasUnsavedChanges"
       :saving="novelStore.saving"
       :event-type-options="eventTypeOptions"
       @select-scene="selectScene"

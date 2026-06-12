@@ -7,6 +7,7 @@ const props = defineProps<{
   selectedSceneId: string
   eventCounts: Record<string, number>
   chapterTitleById: Record<string, string>
+  hasUnsavedChanges: boolean
 }>()
 
 const emit = defineEmits<{
@@ -84,7 +85,7 @@ function getSceneSourceLabel(scene: SceneRecord) {
               </n-space>
 
               <n-text
-                v-if="selectedSceneId === scene.id"
+                v-if="selectedSceneId === scene.id && hasUnsavedChanges"
                 depth="3"
                 class="scene-card__hint"
               >

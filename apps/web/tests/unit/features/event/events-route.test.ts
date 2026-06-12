@@ -42,10 +42,10 @@ vi.mock('vue-router', () => ({
 const eventAnnotationResult = {
   novel: ref({
     id: 'novel-1',
-    title: '²âÊÔĞ¡Ëµ',
+    title: 'æµ‹è¯•å°è¯´',
   }),
   novelStore: {
-    currentChapters: [{ id: 'chapter-1', title: 'µÚÒ»ÕÂ' }],
+    currentChapters: [{ id: 'chapter-1', title: 'ç¬¬ä¸€ç« ' }],
     lastError: '',
     clearError: vi.fn(),
     saving: false,
@@ -55,8 +55,8 @@ const eventAnnotationResult = {
       id: 'scene-1',
       novelId: 'novel-1',
       chapterId: 'chapter-1',
-      title: '³¡¾° 1',
-      content: 'ÄÚÈİ',
+      title: 'åœºæ™¯ 1',
+      content: 'å†…å®¹',
       order: 1,
       wordCount: 120,
       startOffset: 0,
@@ -71,12 +71,12 @@ const eventAnnotationResult = {
     {
       eventId: 'event-1',
       sceneId: 'scene-1',
-      chapterTitle: 'µÚÒ»ÕÂ',
-      sceneTitle: '³¡¾° 1',
+      chapterTitle: 'ç¬¬ä¸€ç« ',
+      sceneTitle: 'åœºæ™¯ 1',
       order: 1,
       type: 'turning_point',
-      title: 'ÊÂ¼ş 1',
-      description: 'ÃèÊö',
+      title: 'äº‹ä»¶ 1',
+      description: 'æè¿°',
       source: 'manual',
     },
   ]),
@@ -93,8 +93,8 @@ const eventAnnotationResult = {
     id: 'scene-1',
     novelId: 'novel-1',
     chapterId: 'chapter-1',
-    title: '³¡¾° 1',
-    content: 'ÄÚÈİ',
+    title: 'åœºæ™¯ 1',
+    content: 'å†…å®¹',
     order: 1,
     wordCount: 120,
     startOffset: 0,
@@ -106,6 +106,7 @@ const eventAnnotationResult = {
   }),
   selectedSceneEvents: ref([]),
   selectedEvent: ref(null),
+  hasUnsavedChanges: ref(false),
   loadContext: loadContextMock,
   selectScene: selectSceneMock,
   selectEvent: selectEventMock,
@@ -209,6 +210,6 @@ describe('events route', () => {
     await wrapper.get('[data-testid="route-jump"]').trigger('click')
 
     expect(jumpToEventMock).toHaveBeenCalledWith('scene-404', 'event-404')
-    expect(warningMock).toHaveBeenCalledWith('Î´ÕÒµ½Ä¿±êÊÂ¼ş£¬ÇëË¢ĞÂºóÖØÊÔ')
+    expect(warningMock).toHaveBeenCalledWith('æœªæ‰¾åˆ°ç›®æ ‡äº‹ä»¶ï¼Œè¯·åˆ·æ–°åé‡è¯•')
   })
 })
