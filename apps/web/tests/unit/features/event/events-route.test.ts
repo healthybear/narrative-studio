@@ -237,7 +237,7 @@ describe('events route', () => {
     expect(successMock).toHaveBeenCalledWith('已保存当前场景的 2 个事件')
   })
 
-  it('tells the user local drafts were retained when save fails', async () => {
+  it('tells the user local drafts were retained and to retry when save fails', async () => {
     saveSelectedSceneEventsMock.mockRejectedValueOnce(new Error('save failed'))
 
     const wrapper = mount(EventsPage, {
@@ -249,6 +249,6 @@ describe('events route', () => {
     await wrapper.get('[data-testid="route-save"]').trigger('click')
 
     expect(saveSelectedSceneEventsMock).toHaveBeenCalledTimes(1)
-    expect(errorMock).toHaveBeenCalledWith('保存失败，本地草稿已保留')
+    expect(errorMock).toHaveBeenCalledWith('保存失败，本地草稿已保留，请重试')
   })
 })

@@ -87,7 +87,7 @@ async function handleSave() {
     message.success(`已保存当前场景的 ${records.length} 个事件`)
   }
   catch {
-    message.error('保存失败，本地草稿已保留')
+    message.error('保存失败，本地草稿已保留，请重试')
   }
 }
 

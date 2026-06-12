@@ -68,9 +68,18 @@ const stubs = {
   }),
   NButton: defineComponent({
     name: 'NButton',
+    props: {
+      type: {
+        type: String,
+        default: '',
+      },
+    },
     emits: ['click'],
-    setup(_, { slots, emit }) {
-      return () => h('button', { onClick: () => emit('click') }, slots.default?.())
+    setup(props, { slots, emit }) {
+      return () => h('button', {
+        'data-type': props.type,
+        onClick: () => emit('click'),
+      }, slots.default?.())
     },
   }),
   NIcon: defineComponent({
@@ -86,9 +95,31 @@ const stubs = {
         type: String,
         default: '',
       },
+      size: {
+        type: String,
+        default: '',
+      },
     },
     setup(props, { slots }) {
-      return () => h('span', { 'data-type': props.type }, slots.default?.())
+      return () => h('span', { 'data-type': props.type, 'data-size': props.size }, slots.default?.())
+    },
+  }),
+  'i-carbon-flash': defineComponent({
+    name: 'ICarbonFlash',
+    setup() {
+      return () => h('i')
+    },
+  }),
+  'i-carbon-add': defineComponent({
+    name: 'ICarbonAdd',
+    setup() {
+      return () => h('i')
+    },
+  }),
+  'i-carbon-save': defineComponent({
+    name: 'ICarbonSave',
+    setup() {
+      return () => h('i')
     },
   }),
 }
@@ -146,45 +177,50 @@ function createEventDraft(): EventDraft {
   }
 }
 
+function buildProps(overrides = {}) {
+  return {
+    novel: createNovel(),
+    scenes: [createScene()],
+    selectedSceneId: 'scene-1',
+    selectedScene: createScene(),
+    selectedSceneEvents: [createEventDraft()],
+    selectedEvent: createEventDraft(),
+    overviewStats: {
+      totalEventCount: 1,
+      populatedSceneCount: 1,
+      emptySceneCount: 0,
+      typeCounts: {
+        action: 1,
+      },
+    },
+    overviewItems: [
+      {
+        eventId: 'event-1',
+        sceneId: 'scene-1',
+        chapterTitle: '第一章',
+        sceneTitle: '场景 1',
+        order: 1,
+        type: 'action',
+        title: '事件 1',
+        description: '描述',
+        source: 'manual' as const,
+      },
+    ],
+    eventCounts: { 'scene-1': 1 },
+    chapterTitleById: { 'chapter-1': '第一章' },
+    hasUnsavedChanges: false,
+    saving: false,
+    eventTypeOptions: [
+      { label: '动作', value: 'action' },
+    ],
+    ...overrides,
+  }
+}
+
 describe('event workspace', () => {
   it('re-emits jump-to-event from the overview panel', async () => {
     const wrapper = mount(EventWorkspace, {
-      props: {
-        novel: createNovel(),
-        scenes: [createScene()],
-        selectedSceneId: 'scene-1',
-        selectedScene: createScene(),
-        selectedSceneEvents: [createEventDraft()],
-        selectedEvent: createEventDraft(),
-        overviewStats: {
-          totalEventCount: 1,
-          populatedSceneCount: 1,
-          emptySceneCount: 0,
-          typeCounts: {
-            action: 1,
-          },
-        },
-        overviewItems: [
-          {
-            eventId: 'event-1',
-            sceneId: 'scene-1',
-            chapterTitle: '第一章',
-            sceneTitle: '场景 1',
-            order: 1,
-            type: 'action',
-            title: '事件 1',
-            description: '描述',
-            source: 'manual',
-          },
-        ],
-        eventCounts: { 'scene-1': 1 },
-        chapterTitleById: { 'chapter-1': '第一章' },
-        hasUnsavedChanges: false,
-        saving: false,
-        eventTypeOptions: [
-          { label: '动作', value: 'action' },
-        ],
-      },
+      props: buildProps(),
       global: {
         stubs,
       },
@@ -199,47 +235,25 @@ describe('event workspace', () => {
 
   it('shows a header-level unsaved cue for the current scene', () => {
     const wrapper = mount(EventWorkspace, {
-      props: {
-        novel: createNovel(),
-        scenes: [createScene()],
-        selectedSceneId: 'scene-1',
-        selectedScene: createScene(),
-        selectedSceneEvents: [createEventDraft()],
-        selectedEvent: createEventDraft(),
-        overviewStats: {
-          totalEventCount: 1,
-          populatedSceneCount: 1,
-          emptySceneCount: 0,
-          typeCounts: {
-            action: 1,
-          },
-        },
-        overviewItems: [
-          {
-            eventId: 'event-1',
-            sceneId: 'scene-1',
-            chapterTitle: '第一章',
-            sceneTitle: '场景 1',
-            order: 1,
-            type: 'action',
-            title: '事件 1',
-            description: '描述',
-            source: 'manual',
-          },
-        ],
-        eventCounts: { 'scene-1': 1 },
-        chapterTitleById: { 'chapter-1': '第一章' },
-        hasUnsavedChanges: true,
-        saving: false,
-        eventTypeOptions: [
-          { label: '动作', value: 'action' },
-        ],
-      },
+      props: buildProps({ hasUnsavedChanges: true }),
       global: {
         stubs,
       },
     })
 
     expect(wrapper.text()).toContain('当前场景未保存')
+  })
+
+  it('emits save from the primary workspace save button', async () => {
+    const wrapper = mount(EventWorkspace, {
+      props: buildProps(),
+      global: {
+        stubs,
+      },
+    })
+
+    await wrapper.get('button[data-type="primary"]').trigger('click')
+
+    expect(wrapper.emitted('save')).toEqual([[]])
   })
 })
