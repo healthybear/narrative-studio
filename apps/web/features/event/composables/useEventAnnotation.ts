@@ -103,11 +103,8 @@ export function useEventAnnotation(novelId: MaybeRefOrGetter<string>) {
     const typeCounts: Record<string, number> = {}
 
     for (const item of allEventItems.value) {
-      if (!item.type) {
-        continue
-      }
-
-      typeCounts[item.type] = (typeCounts[item.type] ?? 0) + 1
+      const typeKey = item.type.trim() || 'untyped'
+      typeCounts[typeKey] = (typeCounts[typeKey] ?? 0) + 1
     }
 
     const populatedSceneIds = new Set(allEventItems.value.map(item => item.sceneId))

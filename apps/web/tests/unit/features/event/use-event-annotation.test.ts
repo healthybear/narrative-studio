@@ -118,6 +118,47 @@ function createTestEvents(): EventRecord[] {
   ]
 }
 
+function createThreeSceneOneEvents(): EventRecord[] {
+  return [
+    {
+      id: 'event-1',
+      novelId: 'novel-1',
+      sceneId: 'scene-1',
+      title: 'Event 1',
+      type: 'action',
+      description: 'Description 1',
+      order: 0,
+      source: 'manual',
+      createdAt: '2026-06-12T00:00:00.000Z',
+      updatedAt: '2026-06-12T00:00:00.000Z',
+    },
+    {
+      id: 'event-2',
+      novelId: 'novel-1',
+      sceneId: 'scene-1',
+      title: 'Event 2',
+      type: 'dialogue',
+      description: 'Description 2',
+      order: 1,
+      source: 'manual',
+      createdAt: '2026-06-12T00:00:00.000Z',
+      updatedAt: '2026-06-12T00:00:00.000Z',
+    },
+    {
+      id: 'event-3',
+      novelId: 'novel-1',
+      sceneId: 'scene-1',
+      title: 'Event 3',
+      type: 'emotion',
+      description: 'Description 3',
+      order: 2,
+      source: 'manual',
+      createdAt: '2026-06-12T00:00:00.000Z',
+      updatedAt: '2026-06-12T00:00:00.000Z',
+    },
+  ]
+}
+
 describe('useEventAnnotation', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -236,7 +277,7 @@ describe('useEventAnnotation', () => {
     expect(annotation.getEventCount('scene-999')).toBe(0)
   })
 
-  it('derives overview items and stats from the current event drafts', () => {
+  it('derives overview items and stats from the current event drafts including untyped drafts', () => {
     const novelStore = seedStore()
     vi.spyOn(novelStore, 'loadNovel').mockResolvedValue(createTestNovel())
 
@@ -246,7 +287,6 @@ describe('useEventAnnotation', () => {
     annotation.updateEventField('event-2', 'title', 'Updated event title')
     annotation.removeEvent('event-3')
     annotation.addEvent()
-    annotation.updateEventField(annotation.selectedEventId.value, 'type', 'emotion')
     annotation.updateEventField(annotation.selectedEventId.value, 'title', 'New scene event')
     annotation.updateEventField(annotation.selectedEventId.value, 'description', 'Draft-only event')
 
@@ -282,7 +322,7 @@ describe('useEventAnnotation', () => {
         chapterTitle: 'Chapter 1',
         sceneTitle: 'Scene 1',
         order: 3,
-        type: 'emotion',
+        type: '',
         title: 'New scene event',
         description: 'Draft-only event',
         source: 'manual',
@@ -295,9 +335,26 @@ describe('useEventAnnotation', () => {
       typeCounts: {
         action: 1,
         dialogue: 1,
-        emotion: 1,
+        untyped: 1,
       },
     })
+  })
+
+  it('chooses the next remaining event in the same scene before falling back to the previous one', () => {
+    const novelStore = seedStore()
+    novelStore.currentEvents = createThreeSceneOneEvents()
+    vi.spyOn(novelStore, 'loadNovel').mockResolvedValue(createTestNovel())
+
+    const annotation = useEventAnnotation('novel-1')
+    annotation.loadContext()
+
+    annotation.selectEvent('event-1')
+    annotation.removeEvent('event-1')
+    expect(annotation.selectedEventId.value).toBe('event-2')
+
+    annotation.selectEvent('event-2')
+    annotation.removeEvent('event-2')
+    expect(annotation.selectedEventId.value).toBe('event-3')
   })
 
   it('jumps to the requested event only when the scene and event are both valid', () => {
@@ -336,6 +393,23 @@ describe('useEventAnnotation', () => {
 
     await annotation.saveSelectedSceneEvents()
     expect(annotation.hasUnsavedChanges.value).toBe(false)
+  })
+
+  it('scopes unsaved changes to the currently selected scene', () => {
+    const novelStore = seedStore()
+    vi.spyOn(novelStore, 'loadNovel').mockResolvedValue(createTestNovel())
+
+    const annotation = useEventAnnotation('novel-1')
+    annotation.loadContext()
+
+    annotation.updateEventField('event-2', 'description', 'Changed description')
+    expect(annotation.hasUnsavedChanges.value).toBe(true)
+
+    annotation.selectScene('scene-2')
+    expect(annotation.hasUnsavedChanges.value).toBe(false)
+
+    annotation.selectScene('scene-1')
+    expect(annotation.hasUnsavedChanges.value).toBe(true)
   })
 
   it('clears exposed event context when the requested novel changes before store state catches up', async () => {
