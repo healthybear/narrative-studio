@@ -18,9 +18,6 @@ function createManualChunks(id: string) {
   if (id.includes('echarts'))
     return 'echarts'
 
-  if (id.includes('d3'))
-    return 'd3'
-
   if (id.includes('@vue') || /[\\/]vue[\\/]/.test(id) || id.includes('pinia') || id.includes('@vueuse'))
     return 'vue-core'
 }
