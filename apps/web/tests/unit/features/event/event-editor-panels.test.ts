@@ -204,6 +204,24 @@ function createEventDraft(overrides: Partial<EventDraft> = {}): EventDraft {
 }
 
 describe('event editor panels', () => {
+  it('shows explicit guidance when no scene is selected in the detail panel', () => {
+    const wrapper = mount(EventDetailPanel, {
+      props: {
+        scene: null,
+        selectedEvent: null,
+        saving: false,
+        eventTypeOptions: [],
+      },
+      global: {
+        stubs,
+      },
+    })
+
+    expect(wrapper.text()).toContain('先选择一个场景')
+    expect(wrapper.text()).toContain('选择场景后，可以查看正文并编辑对应事件')
+    expect(wrapper.text()).not.toContain('还没有选中事件')
+  })
+
   it('renders a primary create CTA when the selected scene has no events', async () => {
     const wrapper = mount(EventListPanel, {
       props: {
