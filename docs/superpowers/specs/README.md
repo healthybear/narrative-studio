@@ -46,10 +46,11 @@ docs/superpowers/specs/
 3. [NLP API](03-api-design/nlp-api.md)（Fastify ↔ Python NLP）
 4. [错误处理](03-api-design/error-handling.md)
 
-#### 🤖 NLP 开发（Python）
-1. [NLP 集成点](05-nlp-integration/)（5个算法模块）
-2. [NLP API](03-api-design/nlp-api.md)（Fastify ↔ Python NLP）
-3. [主动学习策略](05-nlp-integration/README.md#2-主动学习流程)
+#### 🤖 NLP/AI 开发
+1. **⭐ [AI 集成技术演进路线](ai-integration-roadmap.md)** - 三阶段技术路线（LLM API → Agent → 混合架构）
+2. [NLP 集成点](05-nlp-integration/)（5个算法模块）
+3. [NLP API](03-api-design/nlp-api.md)（Fastify ↔ Python NLP）
+4. [主动学习策略](05-nlp-integration/README.md#2-主动学习流程)
 
 ### 按功能查找
 
@@ -83,12 +84,19 @@ docs/superpowers/specs/
 
 ### 按开发阶段查找
 
+#### 功能开发阶段
 - **Phase 1（当前）**：[基础框架](06-implementation/phase-1-foundation.md) - 项目搭建、路由、基础组件
 - **Phase 2**：[数据采集](06-implementation/phase-2-data-collection.md) - 文件导入、章节识别
 - **Phase 3**：[标注功能](06-implementation/phase-3-annotation.md) - 场景拆分、事件标注、人物建模
 - **Phase 4**：[可视化分析](06-implementation/phase-4-visualization.md) - 图表、时间轴、关系网络
 - **Phase 5**：[NLP 集成](06-implementation/phase-5-nlp-integration.md) - AI 自动标注、主动学习
 - **Phase 6**：[AI 生成](06-implementation/phase-6-ai-generation.md) - 智能创作辅助（未来）
+
+#### AI 技术演进路线 ⭐ 新增
+- **[AI 集成技术演进路线](ai-integration-roadmap.md)** - 从 LLM API 到 Agent 系统再到混合架构的三阶段演进
+  - 阶段 1：LLM API 集成（1-2 周，MVP 验证）
+  - 阶段 2：Agent 系统（3-4 周，核心竞争力）
+  - 阶段 3：混合架构（2-3 周，成本优化）
 
 ## 📖 项目概述
 
