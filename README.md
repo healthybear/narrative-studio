@@ -1,214 +1,369 @@
 # Narrative Studio
 
-基于计算叙事学的智能叙事分析与生成平台
+> 面向小说创作与叙事分析的小说工作台。
 
-## 项目概述
+## 项目定位
 
-Narrative Studio 是一个结合自然语言处理、计算叙事学和生成式 AI 的综合性平台，旨在为小说创作者、研究者和 AI 开发者提供叙事分析和智能创作工具。
+Narrative Studio 不是单纯的文本编辑器，也不是只展示分析图表的工具。它的目标是把一部小说拆解成可编辑、可追踪、可分析的结构化对象，并辅助创作者完成：
 
-## 项目结构
+- 小说项目管理
+- 原文导入与章节整理
+- 场景拆分与结构标注
+- 事件、因果链和情节分析
+- 人物建模与人物关系分析
+- 叙事视角、节奏、语言和主题分析
+- 亮点提取与缺陷排查
+- 基于已有设定和内容的续写
 
-```
+项目采用“人工可控、智能辅助”的方向：模型负责提出分析结果和创作建议，创作者负责审核、修改和采纳。
+
+## 当前状态
+
+当前仓库已经形成了一个可用的小说整理与手动标注工作台，但完整的 AI 分析平台仍在演进中。
+
+### 已经可用
+
+- 创建、编辑、搜索、归档和删除小说项目
+- 项目总览、最近活动和模块入口
+- 在浏览器本地保存项目数据
+- 粘贴原文并自动识别常见章节标题
+- 手动调整章节边界
+- 将章节拆分或合并为场景
+- 管理角色、角色别名和角色关系
+- 按场景创建、编辑、排序和删除事件
+- 查看事件总数、场景覆盖情况和事件类型统计
+- 在事件总览和场景编辑器之间跳转
+- 保留编辑草稿，并在保存后写入 IndexedDB
+
+### 尚未接入或仍为占位
+
+- 事件自动检测和 AI 自动标注
+- 情感分析和情感曲线
+- 叙事视角识别与视角一致性检查
+- 因果关系网络和完整情节分析
+- 语言风格、主题和亮点分析
+- 缺陷排查报告
+- AI 续写和多方案生成
+- 多模型供应商接入
+- 用户账号、云端同步和协作
+
+仓库中已经有部分上传和 DOCX 解析工具，但文件导入到项目内容工作台的完整链路仍需要继续整合。
+
+## 当前架构
+
+这是一个 pnpm + Turborepo monorepo：
+
+```text
 narrative-studio/
 ├── apps/
-│   ├── web/          # Nuxt 3 前端应用
-│   ├── api/          # Fastify 后端 API
-│   └── nlp/          # Python NLP 分析服务
+│   ├── web/          # Nuxt 4 前端工作台，目前最完整的应用
+│   ├── api/          # Fastify API，目前提供基础服务骨架
+│   └── nlp/          # Python NLP 模块，目前提供基础 spaCy 分析器
 ├── packages/
-│   ├── types/        # 共享 TypeScript 类型定义
+│   ├── types/        # 共享 TypeScript 类型
 │   └── utils/        # 共享工具函数
-├── turbo.json        # Turborepo 配置
-└── pnpm-workspace.yaml
+├── docs/             # 架构、数据模型、页面和演进设计
+├── turbo.json
+├── pnpm-workspace.yaml
+└── package.json
 ```
 
-## 核心功能模块
+### `apps/web`
 
-### 1️⃣ 叙事结构分析
+基于 Nuxt 4、Vue 3 和 TypeScript 的前端应用，按功能域组织代码：
 
-基于计算叙事学理论，对小说文本进行深度结构化分析。
-
-#### 事件检测与建模
-- **事件提取**: 自动识别文本中的关键事件（冲突、转折、高潮等）
-- **事件分类**: 按叙事功能分类（起因、发展、高潮、结局）
-- **事件关系**: 构建事件之间的因果关系网络
-- **时间线重建**: 还原故事的时间顺序和叙事顺序
-
-#### 情感与人物建模
-- **情感曲线分析**: 追踪文本情感强度的起伏变化
-- **人物识别**: 自动提取小说中的角色及其属性
-- **人物关系网络**: 构建角色之间的社交关系图谱
-- **角色弧光追踪**: 分析角色的成长轨迹和性格变化
-- **人物情感状态**: 追踪角色在不同场景中的情感变化
-
-#### 叙事视角计算
-- **视角识别**: 自动识别叙事视角（第一人称/第三人称全知/第三人称限知）
-- **视角转换检测**: 识别叙事视角的切换点
-- **聚焦人物分析**: 确定每个场景的聚焦角色
-- **叙事距离计算**: 分析叙述者与故事的距离感
-
-#### 结构分析
-- **三幕式结构识别**: 自动划分故事的起承转合
-- **节奏分析**: 评估叙事节奏和张弛度
-- **冲突强度曲线**: 可视化冲突的发展和解决过程
-
-### 2️⃣ 叙事生成与评估
-
-基于生成式 AI 模型，辅助创作者进行智能创作和质量评估。
-
-#### AI 故事创作
-- **情节生成**: 基于设定自动生成故事大纲和情节发展
-- **角色塑造**: AI 辅助创建立体的角色形象和背景故事
-- **对话生成**: 根据角色性格生成符合人设的对话
-- **场景描写**: 自动生成场景描写和氛围渲染
-- **续写建议**: 基于已有内容提供多种续写方向
-
-#### 叙事质量评估
-- **连贯性检测**: 检查情节逻辑和时间线的一致性
-- **人物一致性**: 评估角色行为是否符合人设
-- **节奏评分**: 评估故事节奏的合理性
-- **情感饱满度**: 分析情感表达的丰富程度
-- **创意度评估**: 评估故事的新颖性和创造性
-
-### 3️⃣ 数据采集与标注
-
-为分析和生成提供高质量的结构化数据。
-
-#### 文本导入
-- 支持 `.txt` 和 `.docx` 文件上传
-- 支持直接粘贴文本内容
-- 自动识别章节结构
-
-#### 结构化标注
-- **章节拆分**: 自动识别 + 手动调整
-- **场景划分**: 段落级场景标注
-- **事件标注**: 标记关键事件及其类型
-- **角色标注**: 标记出场角色和角色状态
-- **情感标注**: 标注场景的情感倾向和强度
-- **视角标注**: 标记叙事视角类型
-
-### 4️⃣ 可视化展示
-
-将分析结果以直观的方式呈现。
-
-- **事件时间轴**: 交互式事件流程图
-- **情感曲线图**: 情感强度随时间的变化
-- **人物关系网络**: 动态角色关系图谱
-- **叙事视角分布**: 视角类型的统计和分布
-- **结构热力图**: 冲突强度、节奏变化的可视化
-- **对比分析**: 多部作品的叙事特征对比
-
-## 技术特色
-
-### 计算叙事学理论支撑
-- 基于 Propp 的叙事功能理论
-- Greimas 的行动元模型
-- Genette 的叙事话语理论
-- 三幕式、英雄之旅等经典结构模型
-
-### 先进的 NLP 技术
-- 中文分词和命名实体识别（spaCy）
-- 情感分析和情绪计算
-- 依存句法分析
-- 共指消解和关系抽取
-
-### 生成式 AI 集成
-- 支持接入主流大语言模型（GPT、Claude 等）
-- 提示工程优化
-- 上下文管理和记忆机制
-- 多轮对话式创作
-
-## 快速开始
-
-### 安装依赖
-
-```bash
-# 安装 Node.js 依赖
-pnpm install
-
-# 设置 Python 环境
-cd apps/nlp
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -e .
-python -m spacy download zh_core_web_sm
+```text
+apps/web/
+├── pages/             # 首页、项目列表和项目模块页面
+├── features/
+│   ├── novel/         # 项目、章节、场景和内容工作台
+│   ├── character/     # 角色和人物关系
+│   ├── event/         # 事件标注工作台
+│   └── upload/        # 文件解析能力
+├── stores/            # Pinia 状态
+├── utils/browser/     # IndexedDB 和浏览器文件能力
+└── tests/             # Vitest 单元测试
 ```
 
-### 开发模式
+### `apps/api`
 
-```bash
-# 启动所有服务
-pnpm dev
+基于 Fastify 的后端入口。目前只有健康检查和示例接口，尚未承担模型调用、任务编排或云端数据存储。
 
-# 或分别启动
-pnpm --filter @narrative-studio/web dev      # 前端: http://localhost:3000
-pnpm --filter @narrative-studio/api dev      # API: http://localhost:3001
+后续它应逐步负责：
+
+- 项目和分析结果 API
+- 第三方大模型调用代理
+- 模型供应商适配
+- 分析任务创建、查询和取消
+- Skills 与 Agents 的执行入口
+- 权限、限流、日志、Token 和费用记录
+
+### `apps/nlp`
+
+基于 Python 的分析服务，提供两类能力：
+
+**1. 轻量级本地 NLP**（基于 spaCy）
+
+适合确定性或传统 NLP 任务，例如：
+
+- 分词和实体识别
+- 人物候选提取
+- 文本统计
+- 章节和场景预处理
+- 事件候选提取
+- 基础情感和句法分析
+
+**2. 统一大模型调用接口**
+
+为 Fastify API 提供大模型调用能力：
+
+- 多供应商支持（OpenAI、Claude、豆包、千问）
+- 统一接口和错误处理
+- 结构化输出验证
+- Token 追踪和成本统计
+- 流式生成支持
+
+当前 `NarrativeAnalyzer` 已能返回基础句子数、词数和实体信息，LLM Provider 适配层和高级分析能力仍在规划中。
+
+### 当前数据存储
+
+当前前端使用 IndexedDB 保存项目、章节、场景、角色、关系和事件数据。这种方式适合单机、本地优先和早期原型。
+
+未来如果需要云端同步、多设备访问、长任务记录或团队协作，建议演进为：
+
+```text
+IndexedDB       = 本地草稿、离线编辑和缓存
+服务端数据库    = 正式项目数据、分析结果、任务记录和版本历史
 ```
 
-### 构建
+## 目标分析模型
 
-```bash
-# 构建所有项目
-pnpm build
+小说分析不应依赖一个“一次性分析整本书”的大 Prompt，而应拆成可组合的分析能力：
 
-# 构建特定项目
-pnpm --filter @narrative-studio/web build
-pnpm --filter @narrative-studio/api build
+```text
+原文导入
+  ↓
+文本规范化
+  ↓
+章节和场景拆分
+  ↓
+人物、事件、情绪、视角等候选提取
+  ↓
+模型理解、归纳和交叉验证
+  ↓
+结构化分析结果
+  ↓
+人工审核和修正
+  ↓
+亮点、缺陷、报告或续写建议
 ```
+
+计划覆盖的分析维度包括：
+
+| 维度 | 主要问题 |
+| --- | --- |
+| 事件 | 发生了什么，事件类型是什么，哪些事件是关键节点 |
+| 因果 | 事件之间为什么发生，是否存在因果断裂 |
+| 人物 | 人物目标、动机、关系、行为和成长轨迹 |
+| 视角 | 谁在观察、谁在叙述、视角是否越界或频繁切换 |
+| 情节 | 主线、支线、转折、冲突、高潮和结局如何组织 |
+| 节奏 | 信息密度、场景长度、冲突强度和张弛变化 |
+| 语言 | 句式、词汇、意象、对白、叙述风格和重复表达 |
+| 主题 | 作品反复讨论的问题、价值冲突和主题表达方式 |
+
+## Skills 与 Agents
+
+后续接入第三方模型和自有能力时，建议区分 Skill 和 Agent。
+
+### Skill
+
+Skill 是一个输入输出明确、可以独立测试和复用的能力，例如：
+
+- `extract-characters`
+- `detect-events`
+- `build-causal-links`
+- `analyze-perspective`
+- `analyze-pacing`
+- `analyze-language`
+- `extract-themes`
+- `review-character-consistency`
+- `generate-continuation`
+
+每个 Skill 应该拥有明确的：
+
+- 输入 Schema
+- 输出 Schema
+- Prompt 或算法
+- 模型和参数配置
+- 版本号
+- 证据片段或来源位置
+- 失败和重试策略
+
+### Agent
+
+Agent 负责把多个 Skill 组织成完整工作流。例如“小说缺陷排查 Agent”：
+
+```text
+读取项目结构
+  → 检查事件因果
+  → 检查人物行为一致性
+  → 检查视角稳定性
+  → 检查节奏异常
+  → 检查语言重复
+  → 汇总问题、证据和修改建议
+```
+
+Agent 不应直接随意修改小说数据。更稳妥的做法是先生成结构化分析结果和建议，再由用户审核后写入项目。
+
+## 目标演进路线
+
+### 阶段一：安全接入大模型
+
+```text
+web → api → 第三方模型
+```
+
+- API Key 只保存在后端环境变量
+- 前端不直接调用第三方模型
+- 统一 OpenAI、Claude 以及其他供应商的请求格式
+- 增加结构化输出和错误处理
+- 支持流式生成续写内容
+
+### 阶段二：结构化分析任务
+
+引入 `AnalysisRun` 一类的任务记录，保存：
+
+- 项目和文本版本
+- 使用的 Skill、模型和 Prompt 版本
+- 任务状态和进度
+- 分析输出和证据位置
+- Token 使用量和费用
+- 错误、重试和完成时间
+
+这样分析结果才能被追踪、比较、重跑和人工修订。
+
+### 阶段三：异步 Worker
+
+长篇小说分析通常需要拆成章节和场景执行，后续可以增加：
+
+```text
+apps/worker/          # 长任务、批量分析和 Agent 执行
+packages/llm/         # 模型供应商适配器
+packages/skills/      # 可复用的分析和创作技能
+packages/agents/      # Agent 工作流
+packages/domain/      # 领域模型和结果 Schema
+```
+
+早期可以让 API 直接执行短任务；当任务需要并发、重试、进度、暂停和恢复时，再把执行逻辑迁移到 Worker。仍然建议保留在同一个 monorepo 中，不必急于拆成多个 Git 仓库。
 
 ## 技术栈
 
 ### 前端
-- **Nuxt 3** - Vue 全栈框架
-- **Vue 3** - 渐进式 JavaScript 框架（Composition API）
-- **TypeScript** - 类型安全
-- **Naive UI** - 现代化 UI 组件库
-- **Pinia** - 状态管理
-- **VueUse** - Vue 组合式工具集
-- **ECharts/D3.js** - 数据可视化
+
+- Nuxt 4
+- Vue 3 + TypeScript
+- Pinia
+- Naive UI
+- UnoCSS
+- SCSS
+- Vitest
+- ECharts
+- IndexedDB（通过 `idb`）
+- `mammoth`（DOCX 内容解析）
 
 ### 后端
-- **Fastify** - 高性能 Node.js 框架
-- **TypeScript** - 类型安全
-- **IndexedDB** - 前端本地存储（初期）
 
-### NLP 分析
-- **Python 3.10+**
-- **spaCy** - 工业级 NLP 库（分词、NER、依存分析）
-- **NLTK** - 自然语言处理工具包
-- **Transformers** - 预训练模型（情感分析、文本生成）
-- **NetworkX** - 关系网络分析
+- Fastify
+- TypeScript
+- `@fastify/cors`
+- `@fastify/helmet`
+- `@fastify/rate-limit`
 
-### AI 生成
-- **OpenAI API / Anthropic Claude API** - 大语言模型接入
-- **LangChain** - LLM 应用开发框架
-- **Prompt Engineering** - 提示工程优化
+### NLP
 
-### 工具链
-- **pnpm** - 快速、节省磁盘空间的包管理器
-- **Turborepo** - 高性能构建系统
-- **TypeScript** - 类型系统
-- **localforage** - IndexedDB 封装
-- **mammoth** - .docx 文件解析
+- Python 3.10+
+- spaCy
+- NLTK
+- NumPy
+- pandas
 
-## 项目命令
+当前尚未正式接入第三方大模型 SDK、任务队列、服务端数据库或向量数据库。
+
+## 快速开始
+
+### 安装 Node.js 依赖
+
+项目要求 Node.js `>=20`、pnpm `>=9`。
 
 ```bash
-# 开发
-pnpm dev              # 启动所有开发服务器
-pnpm build            # 构建所有项目
-pnpm lint             # 代码检查
-pnpm type-check       # 类型检查
-pnpm test             # 运行测试
-pnpm clean            # 清理构建产物
+pnpm install
+```
 
-# 针对特定项目
-pnpm --filter @narrative-studio/web <command>
-pnpm --filter @narrative-studio/api <command>
+### 启动前端和 API
+
+```bash
+# 启动仓库中已有的 Node.js 开发服务
+pnpm dev
+```
+
+分别启动时：
+
+```bash
+pnpm --filter @narrative-studio/web dev      # http://localhost:3000
+pnpm --filter @narrative-studio/api dev      # http://localhost:3001
+```
+
+### 设置 NLP 环境
+
+```bash
+cd apps/nlp
+python -m venv venv
+
+# Windows PowerShell
+venv\Scripts\Activate.ps1
+
+# macOS/Linux
+# source venv/bin/activate
+
+pip install -e .
+python -m spacy download zh_core_web_sm
+```
+
+NLP 模块目前是 Python 库，不会被根目录的 `pnpm dev` 自动启动。
+
+## 常用命令
+
+```bash
+pnpm dev              # 启动开发服务
+pnpm build            # 构建所有 Node.js 项目
+pnpm lint             # 运行代码检查
+pnpm type-check       # 运行 TypeScript 类型检查
+pnpm test             # 运行测试
+pnpm clean            # 清理构建产物和依赖目录
+pnpm format           # 格式化 TypeScript、JavaScript、JSON 和 Markdown
+```
+
+针对前端：
+
+```bash
+pnpm --filter @narrative-studio/web test
+pnpm --filter @narrative-studio/web type-check
+pnpm --filter @narrative-studio/web lint
+pnpm --filter @narrative-studio/web build
+```
+
+针对 API：
+
+```bash
+pnpm --filter @narrative-studio/api type-check
+pnpm --filter @narrative-studio/api lint
+pnpm --filter @narrative-studio/api build
 ```
 
 ## 环境变量
 
-### API (.env)
+当前 API 支持：
+
 ```bash
 PORT=3001
 HOST=0.0.0.0
@@ -216,158 +371,23 @@ LOG_LEVEL=info
 CORS_ORIGIN=http://localhost:3000
 ```
 
-### NLP 服务 (.env)
-```bash
-SPACY_MODEL=zh_core_web_sm
-OPENAI_API_KEY=your_api_key_here
-ANTHROPIC_API_KEY=your_api_key_here
-```
-
-## 开发路线图
-
-### 功能开发阶段
-
-#### Phase 1: 数据采集与基础分析（当前阶段）
-- [x] 项目框架搭建
-- [ ] 文本导入功能（上传/粘贴）
-- [ ] 章节自动识别与手动调整
-- [ ] 场景划分与标注界面
-- [ ] 基础 NLP 分析（分词、NER）
-
-#### Phase 2: 叙事结构分析
-- [ ] 事件检测与分类
-- [ ] 事件关系网络构建
-- [ ] 情感分析与情感曲线
-- [ ] 人物识别与关系抽取
-- [ ] 叙事视角识别
-- [ ] 三幕式结构分析
-
-#### Phase 3: 可视化展示
-- [ ] 事件时间轴可视化
-- [ ] 情感曲线图表
-- [ ] 人物关系网络图
-- [ ] 叙事结构热力图
-- [ ] 交互式分析仪表板
-
-#### Phase 4: AI 生成与评估
-- [ ] 大语言模型接入
-- [ ] 情节生成功能
-- [ ] 角色塑造辅助
-- [ ] 对话生成
-- [ ] 叙事质量评估
-- [ ] 续写建议系统
-
-#### Phase 5: 高级功能
-- [ ] 多作品对比分析
-- [ ] 叙事风格学习
-- [ ] 自定义分析模型
-- [ ] 协作标注功能
-- [ ] 数据导出与分享
-
-### AI 技术演进路线 ⭐
-
-详见：[AI 集成技术演进路线](docs/superpowers/specs/ai-integration-roadmap.md)
-
-#### 阶段 1：LLM API 集成（MVP，1-2 周）
-- **目标**：快速验证产品价值
-- **技术方案**：直接调用第三方大模型（豆包、千问、Claude）
-- **准确率**：80-85%
-- **成本**：¥3-5/10万字分析
-- **交付物**：5 大分析模块（场景拆分、事件检测、人物识别、情感分析、视角分析）
-
-#### 阶段 2：Agent 系统（核心竞争力，3-4 周）
-- **目标**：构建生产级智能体系统，提升准确率到 92%+
-- **技术方案**：
-  - 任务规划器（Planner）：分解复杂任务
-  - 工具调用层（Tools）：本地 NLP + LLM + 外部服务协同
-  - 记忆系统（Memory）：上下文管理 + 向量检索
-  - 验证器（Validator）：结果一致性检查
-- **准确率**：92%+
-- **成本**：¥3-5/10万字（与阶段 1 相同）
-- **关键提升**：复杂推理、多轮迭代、工具协同
-
-#### 阶段 3：混合架构（成本优化，2-3 周）
-- **目标**：降低运营成本 60-80%，保持高准确率
-- **技术方案**：智能分流
-  - 简单任务（30%）→ 本地 NLP（免费，准确率 85%）
-  - 中等任务（40%）→ 轻量 LLM（低成本）
-  - 复杂任务（30%）→ Agent 系统（高准确率）
-- **准确率**：92%（复杂任务保持）
-- **成本**：¥1.2/10万字（降低 60-80%）
-
-## 应用场景
-
-### 学术研究
-- 计算叙事学研究
-- 文学作品量化分析
-- 叙事模式挖掘
-- 跨文化叙事比较
-
-### 创作辅助
-- 小说大纲生成
-- 情节逻辑检查
-- 角色一致性验证
-- 节奏优化建议
-
-### 教育培训
-- 写作教学工具
-- 叙事结构可视化教学
-- 创意写作训练
-- 文学作品分析
-
-### 内容产业
-- 剧本评估
-- IP 开发辅助
-- 内容质量把控
-- 创意方向探索
-
-## 开发指南
-
-### 添加新的共享包
+前端可以通过 `NUXT_PUBLIC_API_BASE` 配置 API 地址，默认值为：
 
 ```bash
-mkdir packages/my-package
-cd packages/my-package
-pnpm init
+NUXT_PUBLIC_API_BASE=http://localhost:3001
 ```
 
-### 在项目间共享代码
+第三方模型的 API Key 应在未来接入 API 服务后，保存在服务端环境变量中，不能放入 `apps/web` 的公开运行时配置。
 
-```json
-{
-  "dependencies": {
-    "@narrative-studio/types": "workspace:*",
-    "@narrative-studio/utils": "workspace:*"
-  }
-}
-```
+## 开发原则
 
-## 贡献指南
-
-欢迎贡献！请查看各个子项目的 README 了解更多细节。
-
-### 贡献方向
-- 新的叙事分析算法
-- 可视化组件开发
-- NLP 模型优化
-- 文档和示例完善
-- Bug 修复和性能优化
-
-## 相关资源
-
-### 计算叙事学
-- [Computational Narratology](https://computationalnarrativeanalysis.org/)
-- [Narrative Science](https://narrative.ai/)
-
-### 学术论文
-- Propp, V. (1968). *Morphology of the Folktale*
-- Genette, G. (1980). *Narrative Discourse*
-- Ryan, M. L. (2004). *Narrative across Media*
+- 以当前代码为准，不把路线图当成已实现功能。
+- 保持前端本地优先，但为服务端同步和长任务执行预留边界。
+- 先建立稳定的领域模型和结构化结果，再增加复杂 Agent。
+- 模型输出必须带有来源、置信度或证据位置，便于人工审核。
+- Skill 负责单项能力，Agent 负责流程编排，前端负责展示和用户决策。
+- 不在浏览器中保存第三方模型密钥。
 
 ## License
 
 MIT
-
----
-
-**Narrative Studio** - 让叙事分析更智能，让创作更有洞察力
