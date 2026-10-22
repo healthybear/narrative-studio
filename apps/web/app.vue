@@ -1,5 +1,9 @@
 ﻿<template>
-  <AppProviders>
+  <div>
     <NuxtPage />
-  </AppProviders>
+  </div>
 </template>
+
+<script setup lang="ts">
+// 全局布局
+</script>
